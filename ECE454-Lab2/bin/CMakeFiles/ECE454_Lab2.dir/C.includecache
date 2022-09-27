@@ -1,0 +1,24 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/homes/w/wangw222/ece454/ECE454-Lab2/implementation.c
+stdio.h
+-
+string.h
+-
+stdbool.h
+-
+utilities.h
+/homes/w/wangw222/ece454/ECE454-Lab2/utilities.h
+implementation_reference.h
+/homes/w/wangw222/ece454/ECE454-Lab2/implementation_reference.h
+
+/homes/w/wangw222/ece454/ECE454-Lab2/implementation_reference.h
+
+/homes/w/wangw222/ece454/ECE454-Lab2/utilities.h
+
