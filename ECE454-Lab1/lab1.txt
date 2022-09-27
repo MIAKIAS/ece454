@@ -1,0 +1,177 @@
+#############################################################################################
+utorid: wangw222
+name: WEIZHOU WANG
+email: weizhou.wang@mail.utoronto.ca
+#############################################################################################
+Q1: List the function you think might be important to optimize to in lab2's soruce code?
+A1: In implementation.c:
+            processMoveUp
+            processMoveRight
+            processMoveDown
+            processMoveLeft
+            processRotateCW
+            processRotateCCW
+            processMirrorX
+            processMirrorY
+    Currently, these functions are calling the corresponding reference functions in implementation_reference.c, 
+    but the reference functions have nested loops, which are really time-consuming. So we need to figure out other 
+    ways to avoid using nested loops and reduce the time complexity.
+#############################################################################################
+Q2: Report the 6 measurements using the slowest method of compilation as a baseline, report the speedup for each of the five measurements. Eg., if gcov was the slowest, and -g was twice as fast as gcov, then the speedup for -g relative to gcov would be 2.0.
+A2: VERSION     TIME(s)
+    gprof       0.196
+    gcov        0.216
+    -g          0.184
+    -O2         0.242
+    -O3         0.306       <=slowest
+    -Os         0.262
+
+    VERSION     SPEEDUP(round to 3 decimal places)
+    -O3         baseline
+    -Os         1.17
+    -O2         1.26
+    gcov        1.42
+    gprof       1.56
+    -g          1.66
+    
+#############################################################################################
+Q3: Which is the slowest and why?
+A3: -O3 is the slowest.
+    Since optimization needs more compilation time, and -O3 does the most optimization for the code (including all 
+    optimization flags specified by -O2 and some other flags), it takes up the longest time for the compiler to perform 
+    (needs more time than -O2 to perform the extra optimizations). For -Os, it includes all -O2's optimizations except 
+    the ones that often increase code size (but add one extra -finline-functions flag), so it performs less or similar 
+    optimization than -O2, and so it has a compilation time less than -O3 as well.
+#############################################################################################
+Q4: Which is the fastest and why?
+A4: -g is the fastest.
+    Because it does not require the compiler to optimize the code, while it only produces debug information for the debugger.
+#############################################################################################
+Q5: Which of gprof and gcov is faster and why?
+A5: gprof is faster. 
+    Although both these two options track the statistics of the programs, the gprof only collects statistics at function levels, 
+    and it interrupts the program roughly every 10ms to collect the timing information, while gcov inserts more instructions inside 
+    each function (at arcs) to compute the execution count of each line of code. Since gcov needs to track the execution count for 
+    each single line, it needs to add more instructions than gprof, meaning that it needs more time to compile. In addition, the 
+    gprof option writes to the "gmon.out" file at run time for the profiling statistics, while the gcov option generates extra .gcno 
+    files containing the flow graphs at the compile time, which also takes more compilation time.
+#############################################################################################
+Q6: Report the six measurements using the smallest method of compilation as a baseline, report the relative size increase for each of the six measurements. Eg., if -g was the smallest, and gprof was twice the size of -g, then the relative size increase for gprof relative to -g would be 2.0
+A6: VERSION     SIZE(bytes)
+    gprof       60920
+    gcov        93184
+    -g          60728
+    -O2         33024
+    -O3         33080
+    -Os         29016     <=smallest
+
+    VERSION     SIZE INCREASE(round to 3 decimal places)
+    -Os         baseline
+    -O2         1.138
+    -O3         1.140
+    -g          2.093
+    gprof       2.100
+    gcov        3.211
+#############################################################################################
+Q7: Which is the smallest and why?
+A7: -Os is the smallest. 
+    Because this flag optimizes code size. It enables all optimizations specified in -O2 except the ones that often increase the code size. 
+    In addition, it uses "-finline-functions" optimization flag along with other optimizations for reducing the size, and it makes the compiler 
+    optimize the code size rather than execution speed, resulting in a smaller size than -O2 and -O3. 
+#############################################################################################
+Q8: Which is the largest and why?
+A8: gcov is the largest. 
+    Because it does not perform any code size optimization. In addition, it needs to add instructions to the code to track the execution count for each line of the program, 
+    which is even more than the number of instructions added by using gprof, which only tracks the execution time and counts at function levels about every 10ms, as mentioned in Q5, 
+    which results in a larger binary. 
+#############################################################################################
+Q9: Which of gprof and gcov is smaller and why?
+A9: gprof is smaller. 
+    As mentioned in Q5, gprof only collects the timing information at function levels, and it interrupts the program about every 10ms, but gcov needs to add more instructions inside each function to 
+    compute the execution count of each line of code, resulting in a larger binary. 
+#############################################################################################
+Q10: Report the six measurements using the slowest measurement as a baseline, also report the speedup for each version.
+A10: VERSION     Performance(s)
+     gprof       50.78           
+     gcov        53.98    <=slowest
+     -g          51.53
+     -O2         15.93
+     -O3         15.53
+     -Os         16.31
+
+     VERSION     SPEEDUP(round to 3 decimal places)
+     gcov        baseline
+     -g          1.047
+     gprof       1.063    
+     -Os         3.309
+     -O2         3.389
+     -O3         3.476
+#############################################################################################
+Q11: Which is the slowest and why?
+A11: gcov is the slowest. 
+     Because this option does not perform any execution time optimization when compiling. In addition, it needs to track the execution count for each line of code and also the debugging information (as we added -g as well), 
+     resulting in the largest number of total instructions (as mentioned in previous questions) than gcov and -g, and therefore the slowest performance.
+#############################################################################################
+Q12: Which is the fastest and why?
+A12: -O3 is the fastest. 
+     Becaust it is the flag that performs the most optimization for execution time. In addition, it is also faster than -g, gprof and gcov because it does not need 
+     extra instructions to track the statistics, and does not need to track debugging information.
+#############################################################################################
+Q13: Which of grof and gcov is faster and why?
+A13: gprof is faster. 
+     Because it only interrupts the program roughly every 10ms to sample the execution information, rather than tracking the execution of every single line in the program as in gcov, which is more expensive and time-consuming. 
+     gprof adds fewer extra instructions to the program to track the statistics, resulting in a smaller total number of instructions, which takes less execution time.
+#############################################################################################
+Q14: For each version, list the top 3 functions (give function name and percentage execution time)
+A14: -g -pg:
+            processRotateCWReference    44.76%
+            copyFrame                   40.56%
+            get_counter                 3.68%
+    -O2 -pg
+            processRotateCWReference    41.21%
+            copyFrame                   28.41%
+            get_counter                 23.36%
+    -O3 -pg
+            processRotateCCWReference   49.14%
+            copyFrame                   38.96%
+            processRotateCWReference    2.94%
+#############################################################################################
+Q15: For the "number-one" function for -O3 (the one with the greatest percentage execution time), how does its percentage execution time compare with the percentage execution time for the same function in the -g version? How is this possible? What transformation did the compiler do and to which functions?
+A15: The "number-one" function for -O3 is processRotateCCWReference with a 49.14% execution time, while it only has nearly 0% for -g. In -g, the processRotateCWReference function has 
+     the highest percentage of 44.76%. Since originally, processRotateCCWReference is implemented by calling processRotateCWReference with a recalculated angle, most of the time consumed 
+     by processRotateCCWReference is actually spent by processRotateCWReference. This implementation results in a much higher percentage execution time for processRotateCWReference, 
+     although the reference may actually be rotated CCW much more often. What the compiler probably does in -O3 is unrolling the processRotateCWReference inside the processRotateCCWReference 
+     function to avoid frequent function from push and pop in the stack to improve the performance, and this transformation transfers the percentage of indirect processRotateCWReference 
+     calls to processRotateCCWReference, which increases the percentage of processRotateCCWReference and decreases that of processRotateCWReference.
+#############################################################################################
+Q16: Count the instructions for the function "number-one" function identified in the previous question and report the counts, as well as the reduction (reported as a ratio) in number of instructions for the -O3 version (ie., if the -O3 version has half as many instructions as the -g version, the reduction is 2.0x).
+A16: -g:    39 instructions
+     -O3:   201 instructions
+     Reduction:     0.194
+#############################################################################################
+Q17: Based only on the gcov results (ie., don’t think too much about what the code says) list the functions in the order that you would focus on optimizing them for the provided lab1 inputs and why. Identify each location by its line numbers in the original source file.
+A17: - processRotateCWReference at line 224: because it has the highest execution count (1376) amount all functions, and a triple nested loop being executed 5817150000 times at line 239.
+
+     - processRotateCCWReference at line 269: although it only has 144 execution times, much less than processRotateCWReference, it calls processRotateCWReference 1120 times in the loop 
+       at line 280, where the frequent call takes time to push and pop the function frames on the stack and it results in a 4-layer nested loop that has a really high complexity (N^4).
+
+     - processMoveLeftReference at line 78 and processMoveRightReference at line 176: because of the large nested loop execution counts (199580000, 
+       and 187100000) at line 89 and 187 respectively. In addition, processMoveLeftReference was being called the most times (200 times) than all other functions except processRotateCWReference,
+       and processMoveRightReference was being called 184 times, ranked third among all functions.
+
+     - processMoveUpReference at line 29 and processMoveDownReference at line 127: because the large execution counts (224449416, and 112319784) of the 
+       nested for loops at line 40 and 138 respectively, and both functions have the execution counts of 144, which are tied for the fourth most frequent executed functions.
+     
+     - processMirrorXReference at line 296: this function has the second least execution count of 88.
+
+     - processMirrorYReference at line 328: this function has the least exectuion count of 56.
+#############################################################################################
+Q18(Bonus): Name the shortest GCC compiler flag where the compiler optimization it enables requires memory alignment. How many bytes does the data needs to be aligned?
+A18: -O2 and -O3 (they have same lengths, a tie)
+     These two flags enable several memory alignments by enableing -falign-functions=n, -falign-labels=n, -falign-loops=n, and -falign-jumps=n flags, 
+     where they align the start of functions, branch targets, and loops to the next power-of-two address greater than or equal to n. The parameter n is 
+     machine-dependent by default, otherwise specified, with a maximum value of 65536 [1]. (For Intel C++ Compiler, n is 16 bytes by default [2])
+
+     Reference: 
+     [1] https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html
+     [2] https://www.intel.com/content/www/us/en/develop/documentation/cpp-compiler-developer-guide-and-reference/top/compiler-reference/compiler-options/data-options/falign-loops-qalign-loops.html
