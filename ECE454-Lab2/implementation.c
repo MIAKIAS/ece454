@@ -60,19 +60,6 @@ unsigned char *processMoveLeft(unsigned char *buffer_frame, unsigned width, unsi
  * @param buffer_frame - pointer pointing to a buffer storing the imported 24-bit bitmap image
  * @param width - width of the imported 24-bit bitmap image
  * @param height - height of the imported 24-bit bitmap image
- * @param rotate_iteration - rotate object inside frame buffer clockwise by 90 degrees, <iteration> times
- * @return - pointer pointing a buffer storing a modified 24-bit bitmap image
- * Note: You can assume the frame will always be square and you will be rotating the entire image
- **********************************************************************************************************************/
-unsigned char *processRotateCW(unsigned char *buffer_frame, unsigned width, unsigned height,
-                               int rotate_iteration) {
-    return processRotateCWReference(buffer_frame, width, height, rotate_iteration);
-}
-
-/***********************************************************************************************************************
- * @param buffer_frame - pointer pointing to a buffer storing the imported 24-bit bitmap image
- * @param width - width of the imported 24-bit bitmap image
- * @param height - height of the imported 24-bit bitmap image
  * @param rotate_iteration - rotate object inside frame buffer counter clockwise by 90 degrees, <iteration> times
  * @return - pointer pointing a buffer storing a modified 24-bit bitmap image
  * Note: You can assume the frame will always be square and you will be rotating the entire image
@@ -102,6 +89,30 @@ unsigned char *processMirrorX(unsigned char *buffer_frame, unsigned int width, u
  **********************************************************************************************************************/
 unsigned char *processMirrorY(unsigned char *buffer_frame, unsigned width, unsigned height, int _unused) {
     return processMirrorYReference(buffer_frame, width, height, _unused);
+}
+
+/***********************************************************************************************************************
+ * @param buffer_frame - pointer pointing to a buffer storing the imported 24-bit bitmap image
+ * @param width - width of the imported 24-bit bitmap image
+ * @param height - height of the imported 24-bit bitmap image
+ * @param rotate_iteration - rotate object inside frame buffer clockwise by 90 degrees, <iteration> times
+ * @return - pointer pointing a buffer storing a modified 24-bit bitmap image
+ * Note: You can assume the frame will always be square and you will be rotating the entire image
+ **********************************************************************************************************************/
+unsigned char *processRotateCW(unsigned char *buffer_frame, unsigned width, unsigned height,
+                               int rotate_iteration) {
+    rotate_iteration %= 4;
+    // Rotate CW 90 degrees
+    if (rotate_iteration == 1 || rotate_iteration == -3) {
+        rotate_iteration = 1;
+    // Rotate 180 degrees
+    } else if (rotate_iteration == 2 || rotate_iteration == -2) {
+        return processMirrorY(processMirrorX(buffer_frame, width, height, 0), width, height, 0);
+    // Rotate CCW 90 degrees
+    } else if (rotate_iteration == 3 || rotate_iteration == -1){
+        rotate_iteration = -1;
+    }
+    return processRotateCWReference(buffer_frame, width, height, rotate_iteration);
 }
 
 /***********************************************************************************************************************
@@ -152,6 +163,14 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     int temp; // For swapping numbers
 
     for (int sensorValueIdx = 0; sensorValueIdx < sensor_values_count; ++sensorValueIdx) {
+        /* Here we accumulate the actions every 25 frames. Since the order of actions matters,
+         * (e.g. A Rotation followed by A Moving Up does not equal to A Moving Up followed by A Rotation.)
+         * we define that after each 25 frames, we first issue the rotation action, then mirroring,
+         * and Horizontal and Vertical Moving in the end.
+         * 
+         * As a result, the later ones need to translate the corresponding actions according to
+         * the former ones.
+         */
         char* key = sensor_values[sensorValueIdx].key;
         int value = sensor_values[sensorValueIdx].value;
         if (!strcmp(key, "W")) {
@@ -170,10 +189,12 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
             // Rotate CW 90 degrees
             if (value == 1 || value == -3) {
                 value = 1;
+                // Translate the Moving actions to after the Rotation
                 // Move: left->up, down->left
                 temp = move_up;
                 move_up = move_left;
                 move_left = -1 * temp;
+                // Translate the Mirroring actions to after the Rotation
                 // Flip: X->Y, Y->X
                 temp = mirror_y;
                 if (mirror_x) {
@@ -188,17 +209,21 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
             } else if (value == 2 || value == -2) {
                 // Same as MX + MY
                 value = 0;
+                // Translate the Moving actions to after the Rotation
                 move_left *= -1;
                 move_up *= -1;
+
                 mirror_x = !mirror_x;
                 mirror_y = !mirror_y;
             // Rotate CCW 90 degrees
             } else if (value == 3 || value == -1){
                 value = -1;
+                // Translate the Moving actions to after the Rotation
                 // Move: right->up, up->left
                 temp = move_up;
                 move_up = -1 * move_left;
                 move_left = temp;
+                // Translate the Mirroring actions to after the Rotation
                 // Flip: X->Y, Y->X
                 temp = mirror_y;
                 if (mirror_x) {
@@ -213,11 +238,13 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
             rotate_cw += value;
         } else if (!strcmp(key, "MX")) {
             mirror_x = !mirror_x;
+            // Translate the Mirroring actions to after the Rotation
             // Move: up->down
             move_up *= -1;
         } else if (!strcmp(key, "MY")) {
-            // Move: left->right, right->left
             mirror_y = !mirror_y;
+            // Translate the Mirroring actions to after the Rotation
+            // Move: left->right, right->left
             move_left *= -1;
         }
 
