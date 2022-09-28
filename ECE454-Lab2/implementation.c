@@ -99,20 +99,57 @@ unsigned char *processMirrorY(unsigned char *buffer_frame, unsigned width, unsig
  * @return - pointer pointing a buffer storing a modified 24-bit bitmap image
  * Note: You can assume the frame will always be square and you will be rotating the entire image
  **********************************************************************************************************************/
-unsigned char *processRotateCW(unsigned char *buffer_frame, unsigned width, unsigned height,
-                               int rotate_iteration) {
+unsigned char *processRotate(unsigned char *buffer_frame, unsigned width, int rotate_iteration) {
+    // Because of the accumulation, the iteration may still greater than 4
     rotate_iteration %= 4;
-    // Rotate CW 90 degrees
-    if (rotate_iteration == 1 || rotate_iteration == -3) {
-        rotate_iteration = 1;
-    // Rotate 180 degrees
-    } else if (rotate_iteration == 2 || rotate_iteration == -2) {
-        return processMirrorY(processMirrorX(buffer_frame, width, height, 0), width, height, 0);
-    // Rotate CCW 90 degrees
-    } else if (rotate_iteration == 3 || rotate_iteration == -1){
-        rotate_iteration = -1;
+
+    // Rotate 180 degrees, same as MX + MY
+    if (rotate_iteration == 2 || rotate_iteration == -2) {
+        return processMirrorY(processMirrorX(buffer_frame, width, width, 0), width, width, 0);
+    } else {
+        // allocate memory for temporary image buffer
+        unsigned char *rendered_frame = allocateFrame(width, width);
+        // Rotate CW 90 degrees
+        if (rotate_iteration == 1 || rotate_iteration == -3) { 
+            // store shifted pixels to temporary buffer
+            int render_column = width - 1;
+            int render_row = 0;
+            int position_frame_buffer;
+            for (int row = 0; row < width; row++) {
+                for (int column = 0; column < width; column++) {
+                    position_frame_buffer = row * width * 3 + column * 3;
+                    rendered_frame[render_row * width * 3 + render_column * 3] = buffer_frame[position_frame_buffer];
+                    rendered_frame[render_row * width * 3 + render_column * 3 + 1] = buffer_frame[position_frame_buffer + 1];
+                    rendered_frame[render_row * width * 3 + render_column * 3 + 2] = buffer_frame[position_frame_buffer + 2];
+                    render_row += 1;
+                }
+                render_row = 0;
+                render_column -= 1;
+            }
+        // Rotate CCW 90 degrees
+        } else if (rotate_iteration == 3 || rotate_iteration == -1){
+            // store shifted pixels to temporary buffer
+            int render_column = 0;
+            int render_row = width - 1;
+            int position_frame_buffer;
+            for (int row = 0; row < width; row++) {
+                for (int column = 0; column < width; column++) {
+                    position_frame_buffer = row * width * 3 + column * 3;
+                    rendered_frame[render_row * width * 3 + render_column * 3] = buffer_frame[position_frame_buffer];
+                    rendered_frame[render_row * width * 3 + render_column * 3 + 1] = buffer_frame[position_frame_buffer + 1];
+                    rendered_frame[render_row * width * 3 + render_column * 3 + 2] = buffer_frame[position_frame_buffer + 2];
+                    render_row -= 1;
+                }
+                render_row = width - 1;
+                render_column += 1;
+            }
+        }
+        // copy the temporary buffer back to original frame buffer
+        buffer_frame = copyFrame(rendered_frame, buffer_frame, width, width);
+        // free temporary image buffer
+        deallocateFrame(rendered_frame);
+        return buffer_frame;
     }
-    return processRotateCWReference(buffer_frame, width, height, rotate_iteration);
 }
 
 /***********************************************************************************************************************
@@ -121,7 +158,7 @@ unsigned char *processRotateCW(unsigned char *buffer_frame, unsigned width, unsi
  **********************************************************************************************************************/
 void print_team_info(){
     // Please modify this field with something interesting
-    char team_name[] = "打中文会变慢吗";
+    char team_name[] = "aaa";
 
     // Please fill in your information
     char student_first_name[] = "Weizhou";
@@ -253,7 +290,7 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
             rotate_cw %= 4;
             if (rotate_cw) {
                 //printf("Rotate CW %d degrees\n", rotate_cw);
-                frame_buffer = processRotateCW(frame_buffer, width, height, rotate_cw);
+                frame_buffer = processRotate(frame_buffer, width, rotate_cw);
             }
             if (mirror_x) {
                 //printf("Mirror X\n");
