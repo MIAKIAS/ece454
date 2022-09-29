@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include "utilities.h"  // DO NOT REMOVE this line
 #include "implementation_reference.h"   // DO NOT REMOVE this line
+#include <stdlib.h>
 
 /***********************************************************************************************************************
  * @param buffer_frame - pointer pointing to a buffer storing the imported 24-bit bitmap image
@@ -190,6 +191,38 @@ void print_team_info(){
 void implementation_driver(struct kv *sensor_values, int sensor_values_count, unsigned char *frame_buffer,
                            unsigned int width, unsigned int height, bool grading_mode) {
     /*******************************************************************************************************************
+     * Store only the colored pixels. Furture actions will only change the states of these pixles.
+     *******************************************************************************************************************/
+    // Count the total number of colored pixels
+    int color_count = 0;
+    int size = width * height * 3;
+    for (int i = 0; i < size; i += 3) {
+        if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
+            ++color_count;
+        }
+    }
+
+    // A list stores the colors of all colored pixels. [R, G, B, R, G, B,......]
+    unsigned char* color_buffer = (unsigned char*)malloc(3 * color_count * sizeof(char));
+    // A list stores the coordinates of all colored pixels. [Row, Col, Row, Col, Row, Col,......]
+    int* color_coordinate = (int*)malloc(2 * color_count * sizeof(int));
+
+    // Store the values to the lists
+    int position_frame_buffer;
+    int row_index = 3 * width;
+    color_count = 0;
+    for (int i = 0; i < size; i += 3) {
+        if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
+            color_buffer[color_count*3] = frame_buffer[i];
+            color_buffer[color_count*3+1] = frame_buffer[i+1];
+            color_buffer[color_count*3+2] = frame_buffer[i+2];
+            color_coordinate[color_count*2] = i / row_index;
+            color_coordinate[color_count*2+1] = (i / 3) % width;
+            ++color_count;
+        }
+    }
+
+    /*******************************************************************************************************************
      * Summarize the actions performed in 25 frames into one frame
      *******************************************************************************************************************/
     int move_up = 0;
@@ -301,8 +334,36 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                 frame_buffer = processMirrorY(frame_buffer, width, height, 0);
             }
             if (move_up) {
-                //printf("Move up %d units\n", move_up);
+                printf("Move up %d units\n", move_up);
+                printBMP(width, height, frame_buffer);
+                printf("=============================================\n");
                 frame_buffer = processMoveUp(frame_buffer, width, height, move_up);
+                // int position_frame_buffer;
+                // for (int i = 0; i < color_count; ++i) {
+                //     // Clear up old colored pixels
+                //     position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
+                //     frame_buffer[position_frame_buffer] = 255;
+                //     frame_buffer[position_frame_buffer+1] = 255;
+                //     frame_buffer[position_frame_buffer+2] = 255;
+
+                //     // Move coordinates of colored pixels
+                //     color_coordinate[i*2] -= move_up;
+                // }
+
+                // // printBMP(width, height, frame_buffer);
+                // // printf("=============================================\n");
+
+                // // Write colored pixels back to the frame
+                // for (int i = 0; i < color_count; ++i) {
+                //     // Clear up old colored pixels
+                //     position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
+                //     frame_buffer[position_frame_buffer] = color_buffer[i*3];
+                //     frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
+                //     frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
+                // }
+
+                printBMP(width, height, frame_buffer);
+                printf("=============================================\n");
             }
             if (move_left) {
                 // printf("Move left %d units\n\n", move_left);
