@@ -320,55 +320,162 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
 
         // Perform one action every 25 frame
         if ((sensorValueIdx+1) % 25 == 0) {
+            int position_frame_buffer;
+
             rotate_cw %= 4;
             if (rotate_cw) {
                 //printf("Rotate CW %d degrees\n", rotate_cw);
                 frame_buffer = processRotate(frame_buffer, width, rotate_cw);
+                // if (rotate_cw == 2 || rotate_cw == -2) {
+                //     for (int i = 0; i < color_count; ++i) {
+                //         position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
+                //         frame_buffer[position_frame_buffer] = 255;
+                //         frame_buffer[position_frame_buffer+1] = 255;
+                //         frame_buffer[position_frame_buffer+2] = 255;  
+                //     }
+                //     for (int i = 0; i < color_count; ++i) {
+                //         color_coordinate[i*2] = height - color_coordinate[i*2] - 1;
+                //         color_coordinate[i*2+1] = width - color_coordinate[i*2+1] - 1;
+                //     }
+                //     for (int i = 0; i < color_count; ++i) {
+                //         // Write colored pixels back to the frame
+                //         position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
+                //         frame_buffer[position_frame_buffer] = color_buffer[i*3];
+                //         frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
+                //         frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
+                //     }
+                // } else {
+                //     //frame_buffer = processRotate(frame_buffer, width, rotate_cw);
+                    
+                //     if (rotate_cw == 1 || rotate_cw == -3) {
+                //         frame_buffer = processRotate(frame_buffer, width, rotate_cw);
+                //         // for (int i = 0; i < color_count; ++i) {
+                //         //     position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
+                //         //     frame_buffer[position_frame_buffer] = 255;
+                //         //     frame_buffer[position_frame_buffer+1] = 255;
+                //         //     frame_buffer[position_frame_buffer+2] = 255;  
+                //         // }
+                //         // for (int i = 0; i < color_count; ++i) {
+                //         //     temp = color_coordinate[i*2];
+                //         //     color_coordinate[i*2] = color_coordinate[i*2+1];
+                //         //     color_coordinate[i*2+1] = width - 1 - temp;
+                //         // }
+                //         // for (int i = 0; i < color_count; ++i) {
+                //         //     // Write colored pixels back to the frame
+                //         //     position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
+                //         //     frame_buffer[position_frame_buffer] = color_buffer[i*3];
+                //         //     frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
+                //         //     frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
+                //         // }
+                //     } else {
+                //         for (int i = 0; i < color_count; ++i) {
+                //             position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
+                //             frame_buffer[position_frame_buffer] = 255;
+                //             frame_buffer[position_frame_buffer+1] = 255;
+                //             frame_buffer[position_frame_buffer+2] = 255;  
+                //         }
+                //         for (int i = 0; i < color_count; ++i) {
+                //             temp = color_coordinate[i*2];
+                //             color_coordinate[i*2] = height - 1 - color_coordinate[i*2+1];
+                //             color_coordinate[i*2+1] = temp;
+                //         }
+                //         for (int i = 0; i < color_count; ++i) {
+                //             // Write colored pixels back to the frame
+                //             position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
+                //             frame_buffer[position_frame_buffer] = color_buffer[i*3];
+                //             frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
+                //             frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
+                //         }
+                //     }
+                    
+                // }
             }
             if (mirror_x) {
                 //printf("Mirror X\n");
                 frame_buffer = processMirrorX(frame_buffer, width, height, 0);
-            }
-            if (mirror_y) {
-                //printf("Mirror Y\n");
-                frame_buffer = processMirrorY(frame_buffer, width, height, 0);
-            }
-            if (move_up) {
-                printf("Move up %d units\n", move_up);
-                printBMP(width, height, frame_buffer);
-                printf("=============================================\n");
-                frame_buffer = processMoveUp(frame_buffer, width, height, move_up);
-                // int position_frame_buffer;
+                // Clear up old colored pixels
                 // for (int i = 0; i < color_count; ++i) {
-                //     // Clear up old colored pixels
                 //     position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
                 //     frame_buffer[position_frame_buffer] = 255;
                 //     frame_buffer[position_frame_buffer+1] = 255;
-                //     frame_buffer[position_frame_buffer+2] = 255;
-
-                //     // Move coordinates of colored pixels
-                //     color_coordinate[i*2] -= move_up;
+                //     frame_buffer[position_frame_buffer+2] = 255;  
                 // }
-
-                // // printBMP(width, height, frame_buffer);
-                // // printf("=============================================\n");
-
-                // // Write colored pixels back to the frame
                 // for (int i = 0; i < color_count; ++i) {
-                //     // Clear up old colored pixels
+                //     // Move coordinates of colored pixels
+                //     color_coordinate[i*2] = height - color_coordinate[i*2] - 1;
+                // }
+                // for (int i = 0; i < color_count; ++i) {
+                //     // Write colored pixels back to the frame
                 //     position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
                 //     frame_buffer[position_frame_buffer] = color_buffer[i*3];
                 //     frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
                 //     frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
                 // }
-
-                printBMP(width, height, frame_buffer);
-                printf("=============================================\n");
+            }
+            if (mirror_y) {
+                //printf("Mirror Y\n");
+                frame_buffer = processMirrorY(frame_buffer, width, height, 0);
+                // for (int i = 0; i < color_count; ++i) {
+                //     position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
+                //     frame_buffer[position_frame_buffer] = 255;
+                //     frame_buffer[position_frame_buffer+1] = 255;
+                //     frame_buffer[position_frame_buffer+2] = 255;  
+                // }
+                // for (int i = 0; i < color_count; ++i) {
+                //     // Move coordinates of colored pixels
+                //     color_coordinate[i*2+1] = width - color_coordinate[i*2+1] - 1;
+                // }
+                // for (int i = 0; i < color_count; ++i) {
+                //     // Write colored pixels back to the frame
+                //     position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
+                //     frame_buffer[position_frame_buffer] = color_buffer[i*3];
+                //     frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
+                //     frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
+                // }
+            }
+            if (move_up) {
+                //printf("Move up %d units\n", move_up);
+                for (int i = 0; i < color_count; ++i) {
+                    position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
+                    frame_buffer[position_frame_buffer] = 255;
+                    frame_buffer[position_frame_buffer+1] = 255;
+                    frame_buffer[position_frame_buffer+2] = 255;  
+                }
+                for (int i = 0; i < color_count; ++i) {
+                    // Move coordinates of colored pixels
+                    color_coordinate[i*2] -= move_up;
+                }
+                for (int i = 0; i < color_count; ++i) {
+                    // Write colored pixels back to the frame
+                    position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
+                    frame_buffer[position_frame_buffer] = color_buffer[i*3];
+                    frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
+                    frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
+                }
             }
             if (move_left) {
                 // printf("Move left %d units\n\n", move_left);
-                frame_buffer = processMoveLeft(frame_buffer, width, height, move_left);
+                for (int i = 0; i < color_count; ++i) {
+                    position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
+                    frame_buffer[position_frame_buffer] = 255;
+                    frame_buffer[position_frame_buffer+1] = 255;
+                    frame_buffer[position_frame_buffer+2] = 255;  
+                }
+                for (int i = 0; i < color_count; ++i) {
+                    // Move coordinates of colored pixels
+                    color_coordinate[i*2+1] -= move_left;
+                }
+                for (int i = 0; i < color_count; ++i) {
+                    // Write colored pixels back to the frame
+                    position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
+                    frame_buffer[position_frame_buffer] = color_buffer[i*3];
+                    frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
+                    frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
+                }
             }
+
+            
+
             verifyFrame(frame_buffer, width, height, grading_mode);
 
             // Clear them up for next iteration
