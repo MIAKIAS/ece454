@@ -6,154 +6,6 @@
 #include <stdlib.h>
 
 /***********************************************************************************************************************
- * @param buffer_frame - pointer pointing to a buffer storing the imported 24-bit bitmap image
- * @param width - width of the imported 24-bit bitmap image
- * @param height - height of the imported 24-bit bitmap image
- * @param offset - number of pixels to shift the object in bitmap image up
- * @return - pointer pointing a buffer storing a modified 24-bit bitmap image
- * Note1: White pixels RGB(255,255,255) are treated as background. Object in the image refers to non-white pixels.
- * Note2: You can assume the object will never be moved off the screen
- **********************************************************************************************************************/
-unsigned char *processMoveUp(unsigned char *buffer_frame, unsigned width, unsigned height, int offset) {
-    return processMoveUpReference(buffer_frame, width, height, offset);
-}
-
-/***********************************************************************************************************************
- * @param buffer_frame - pointer pointing to a buffer storing the imported 24-bit bitmap image
- * @param width - width of the imported 24-bit bitmap image
- * @param height - height of the imported 24-bit bitmap image
- * @param offset - number of pixels to shift the object in bitmap image left
- * @return - pointer pointing a buffer storing a modified 24-bit bitmap image
- * Note1: White pixels RGB(255,255,255) are treated as background. Object in the image refers to non-white pixels.
- * Note2: You can assume the object will never be moved off the screen
- **********************************************************************************************************************/
-unsigned char *processMoveRight(unsigned char *buffer_frame, unsigned width, unsigned height, int offset) {
-    return processMoveRightReference(buffer_frame, width, height, offset);
-}
-
-/***********************************************************************************************************************
- * @param buffer_frame - pointer pointing to a buffer storing the imported 24-bit bitmap image
- * @param width - width of the imported 24-bit bitmap image
- * @param height - height of the imported 24-bit bitmap image
- * @param offset - number of pixels to shift the object in bitmap image up
- * @return - pointer pointing a buffer storing a modified 24-bit bitmap image
- * Note1: White pixels RGB(255,255,255) are treated as background. Object in the image refers to non-white pixels.
- * Note2: You can assume the object will never be moved off the screen
- **********************************************************************************************************************/
-unsigned char *processMoveDown(unsigned char *buffer_frame, unsigned width, unsigned height, int offset) {
-    return processMoveDownReference(buffer_frame, width, height, offset);
-}
-
-/***********************************************************************************************************************
- * @param buffer_frame - pointer pointing to a buffer storing the imported 24-bit bitmap image
- * @param width - width of the imported 24-bit bitmap image
- * @param height - height of the imported 24-bit bitmap image
- * @param offset - number of pixels to shift the object in bitmap image right
- * @return - pointer pointing a buffer storing a modified 24-bit bitmap image
- * Note1: White pixels RGB(255,255,255) are treated as background. Object in the image refers to non-white pixels.
- * Note2: You can assume the object will never be moved off the screen
- **********************************************************************************************************************/
-unsigned char *processMoveLeft(unsigned char *buffer_frame, unsigned width, unsigned height, int offset) {
-    return processMoveLeftReference(buffer_frame, width, height, offset);
-}
-
-/***********************************************************************************************************************
- * @param buffer_frame - pointer pointing to a buffer storing the imported 24-bit bitmap image
- * @param width - width of the imported 24-bit bitmap image
- * @param height - height of the imported 24-bit bitmap image
- * @param rotate_iteration - rotate object inside frame buffer counter clockwise by 90 degrees, <iteration> times
- * @return - pointer pointing a buffer storing a modified 24-bit bitmap image
- * Note: You can assume the frame will always be square and you will be rotating the entire image
- **********************************************************************************************************************/
-unsigned char *processRotateCCW(unsigned char *buffer_frame, unsigned width, unsigned height,
-                                int rotate_iteration) {
-    return processRotateCCWReference(buffer_frame, width, height, rotate_iteration);
-}
-
-/***********************************************************************************************************************
- * @param buffer_frame - pointer pointing to a buffer storing the imported 24-bit bitmap image
- * @param width - width of the imported 24-bit bitmap image
- * @param height - height of the imported 24-bit bitmap image
- * @param _unused - this field is unused
- * @return
- **********************************************************************************************************************/
-unsigned char *processMirrorX(unsigned char *buffer_frame, unsigned int width, unsigned int height, int _unused) {
-    return processMirrorXReference(buffer_frame, width, height, _unused);
-}
-
-/***********************************************************************************************************************
- * @param buffer_frame - pointer pointing to a buffer storing the imported 24-bit bitmap image
- * @param width - width of the imported 24-bit bitmap image
- * @param height - height of the imported 24-bit bitmap image
- * @param _unused - this field is unused
- * @return
- **********************************************************************************************************************/
-unsigned char *processMirrorY(unsigned char *buffer_frame, unsigned width, unsigned height, int _unused) {
-    return processMirrorYReference(buffer_frame, width, height, _unused);
-}
-
-/***********************************************************************************************************************
- * @param buffer_frame - pointer pointing to a buffer storing the imported 24-bit bitmap image
- * @param width - width of the imported 24-bit bitmap image
- * @param height - height of the imported 24-bit bitmap image
- * @param rotate_iteration - rotate object inside frame buffer clockwise by 90 degrees, <iteration> times
- * @return - pointer pointing a buffer storing a modified 24-bit bitmap image
- * Note: You can assume the frame will always be square and you will be rotating the entire image
- **********************************************************************************************************************/
-unsigned char *processRotate(unsigned char *buffer_frame, unsigned width, int rotate_iteration) {
-    // Because of the accumulation, the iteration may still greater than 4
-    rotate_iteration %= 4;
-
-    // Rotate 180 degrees, same as MX + MY
-    if (rotate_iteration == 2 || rotate_iteration == -2) {
-        return processMirrorY(processMirrorX(buffer_frame, width, width, 0), width, width, 0);
-    } else {
-        // allocate memory for temporary image buffer
-        unsigned char *rendered_frame = allocateFrame(width, width);
-        // Rotate CW 90 degrees
-        if (rotate_iteration == 1 || rotate_iteration == -3) { 
-            // store shifted pixels to temporary buffer
-            int render_column = width - 1;
-            int render_row = 0;
-            int position_frame_buffer;
-            for (int row = 0; row < width; row++) {
-                for (int column = 0; column < width; column++) {
-                    position_frame_buffer = row * width * 3 + column * 3;
-                    rendered_frame[render_row * width * 3 + render_column * 3] = buffer_frame[position_frame_buffer];
-                    rendered_frame[render_row * width * 3 + render_column * 3 + 1] = buffer_frame[position_frame_buffer + 1];
-                    rendered_frame[render_row * width * 3 + render_column * 3 + 2] = buffer_frame[position_frame_buffer + 2];
-                    render_row += 1;
-                }
-                render_row = 0;
-                render_column -= 1;
-            }
-        // Rotate CCW 90 degrees
-        } else if (rotate_iteration == 3 || rotate_iteration == -1){
-            // store shifted pixels to temporary buffer
-            int render_column = 0;
-            int render_row = width - 1;
-            int position_frame_buffer;
-            for (int row = 0; row < width; row++) {
-                for (int column = 0; column < width; column++) {
-                    position_frame_buffer = row * width * 3 + column * 3;
-                    rendered_frame[render_row * width * 3 + render_column * 3] = buffer_frame[position_frame_buffer];
-                    rendered_frame[render_row * width * 3 + render_column * 3 + 1] = buffer_frame[position_frame_buffer + 1];
-                    rendered_frame[render_row * width * 3 + render_column * 3 + 2] = buffer_frame[position_frame_buffer + 2];
-                    render_row -= 1;
-                }
-                render_row = width - 1;
-                render_column += 1;
-            }
-        }
-        // copy the temporary buffer back to original frame buffer
-        buffer_frame = copyFrame(rendered_frame, buffer_frame, width, width);
-        // free temporary image buffer
-        deallocateFrame(rendered_frame);
-        return buffer_frame;
-    }
-}
-
-/***********************************************************************************************************************
  * WARNING: Do not modify the implementation_driver and team info prototype (name, parameter, return value) !!!
  *          Do not forget to modify the team_name and team member information !!!
  **********************************************************************************************************************/
@@ -322,228 +174,74 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
         if ((sensorValueIdx+1) % 25 == 0) {
             int position_frame_buffer;
 
+            // Clean up old colored pixles
+            for (int i = 0; i < color_count; ++i) {
+                position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
+                frame_buffer[position_frame_buffer] = 255;
+                frame_buffer[position_frame_buffer+1] = 255;
+                frame_buffer[position_frame_buffer+2] = 255;  
+            }
+
             rotate_cw %= 4;
             if (rotate_cw) {
-                printf("Rotate CW %d degrees\n", rotate_cw);
-                //frame_buffer = processRotate(frame_buffer, width, rotate_cw);
                 if (rotate_cw == 2 || rotate_cw == -2) {
-                    // color_count = 0;
-                    // for (int i = 0; i < size; i += 3) {
-                    //     if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
-                    //         color_buffer[color_count*3] = frame_buffer[i];
-                    //         color_buffer[color_count*3+1] = frame_buffer[i+1];
-                    //         color_buffer[color_count*3+2] = frame_buffer[i+2];
-                    //         color_coordinate[color_count*2] = i / row_index;
-                    //         color_coordinate[color_count*2+1] = (i / 3) % width;
-                    //         ++color_count;
-                    //     }
-                    // }
-                    for (int i = 0; i < color_count; ++i) {
-                        position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
-                        frame_buffer[position_frame_buffer] = 255;
-                        frame_buffer[position_frame_buffer+1] = 255;
-                        frame_buffer[position_frame_buffer+2] = 255;  
-                    }
                     for (int i = 0; i < color_count; ++i) {
                         color_coordinate[i*2] = height - color_coordinate[i*2] - 1;
                         color_coordinate[i*2+1] = width - color_coordinate[i*2+1] - 1;
                     }
-                    for (int i = 0; i < color_count; ++i) {
-                        // Write colored pixels back to the frame
-                        position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
-                        frame_buffer[position_frame_buffer] = color_buffer[i*3];
-                        frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
-                        frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
-                    }
-                } else {
-                    //frame_buffer = processRotate(frame_buffer, width, rotate_cw);
-                    
+                } else {                   
                     if (rotate_cw == 1 || rotate_cw == -3) {
-                        //frame_buffer = processRotate(frame_buffer, width, rotate_cw);
-                        color_count = 0;
-                        for (int i = 0; i < size; i += 3) {
-                            if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
-                                color_buffer[color_count*3] = frame_buffer[i];
-                                color_buffer[color_count*3+1] = frame_buffer[i+1];
-                                color_buffer[color_count*3+2] = frame_buffer[i+2];
-                                color_coordinate[color_count*2] = i / row_index;
-                                color_coordinate[color_count*2+1] = (i / 3) % width;
-                                ++color_count;
-                            }
-                        }
-                        for (int i = 0; i < color_count; ++i) {
-                            position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
-                            frame_buffer[position_frame_buffer] = 255;
-                            frame_buffer[position_frame_buffer+1] = 255;
-                            frame_buffer[position_frame_buffer+2] = 255;  
-                        }
                         for (int i = 0; i < color_count; ++i) {
                             temp = color_coordinate[i*2];
                             color_coordinate[i*2] = color_coordinate[i*2+1];
                             color_coordinate[i*2+1] = width - 1 - temp;
                         }
-                        for (int i = 0; i < color_count; ++i) {
-                            // Write colored pixels back to the frame
-                            position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
-                            frame_buffer[position_frame_buffer] = color_buffer[i*3];
-                            frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
-                            frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
-                        }
                     } else {
-                        for (int i = 0; i < color_count; ++i) {
-                            position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
-                            frame_buffer[position_frame_buffer] = 255;
-                            frame_buffer[position_frame_buffer+1] = 255;
-                            frame_buffer[position_frame_buffer+2] = 255;  
-                        }
                         for (int i = 0; i < color_count; ++i) {
                             temp = color_coordinate[i*2];
                             color_coordinate[i*2] = height - 1 - color_coordinate[i*2+1];
                             color_coordinate[i*2+1] = temp;
-                        }
-                        for (int i = 0; i < color_count; ++i) {
-                            // Write colored pixels back to the frame
-                            position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
-                            frame_buffer[position_frame_buffer] = color_buffer[i*3];
-                            frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
-                            frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
                         }
                     }
                     
                 }
             }
             if (mirror_x) {
-                printf("Mirror X\n");
-                //frame_buffer = processMirrorX(frame_buffer, width, height, 0);
-                color_count = 0;
-                for (int i = 0; i < size; i += 3) {
-                    if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
-                        color_buffer[color_count*3] = frame_buffer[i];
-                        color_buffer[color_count*3+1] = frame_buffer[i+1];
-                        color_buffer[color_count*3+2] = frame_buffer[i+2];
-                        color_coordinate[color_count*2] = i / row_index;
-                        color_coordinate[color_count*2+1] = (i / 3) % width;
-                        ++color_count;
-                    }
-                }
-                // Clear up old colored pixels
-                for (int i = 0; i < color_count; ++i) {
-                    position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
-                    frame_buffer[position_frame_buffer] = 255;
-                    frame_buffer[position_frame_buffer+1] = 255;
-                    frame_buffer[position_frame_buffer+2] = 255;  
-                }
+                // printf("Mirror X\n");
                 for (int i = 0; i < color_count; ++i) {
                     // Move coordinates of colored pixels
                     color_coordinate[i*2] = height - color_coordinate[i*2] - 1;
                 }
-                for (int i = 0; i < color_count; ++i) {
-                    // Write colored pixels back to the frame
-                    position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
-                    frame_buffer[position_frame_buffer] = color_buffer[i*3];
-                    frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
-                    frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
-                }
             }
             if (mirror_y) {
-                printf("Mirror Y\n");
-                // frame_buffer = processMirrorY(frame_buffer, width, height, 0);
-                color_count = 0;
-                for (int i = 0; i < size; i += 3) {
-                    if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
-                        color_buffer[color_count*3] = frame_buffer[i];
-                        color_buffer[color_count*3+1] = frame_buffer[i+1];
-                        color_buffer[color_count*3+2] = frame_buffer[i+2];
-                        color_coordinate[color_count*2] = i / row_index;
-                        color_coordinate[color_count*2+1] = (i / 3) % width;
-                        ++color_count;
-                    }
-                }
-                for (int i = 0; i < color_count; ++i) {
-                    position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
-                    frame_buffer[position_frame_buffer] = 255;
-                    frame_buffer[position_frame_buffer+1] = 255;
-                    frame_buffer[position_frame_buffer+2] = 255;  
-                }
+                // printf("Mirror Y\n");
                 for (int i = 0; i < color_count; ++i) {
                     // Move coordinates of colored pixels
                     color_coordinate[i*2+1] = width - color_coordinate[i*2+1] - 1;
                 }
-                for (int i = 0; i < color_count; ++i) {
-                    // Write colored pixels back to the frame
-                    position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
-                    frame_buffer[position_frame_buffer] = color_buffer[i*3];
-                    frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
-                    frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
-                }
             }
             if (move_up) {
-                printf("Move up %d units\n", move_up);
-                //frame_buffer = processMoveUp(frame_buffer, width, height, move_up);
-                color_count = 0;
-                for (int i = 0; i < size; i += 3) {
-                    if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
-                        color_buffer[color_count*3] = frame_buffer[i];
-                        color_buffer[color_count*3+1] = frame_buffer[i+1];
-                        color_buffer[color_count*3+2] = frame_buffer[i+2];
-                        color_coordinate[color_count*2] = i / row_index;
-                        color_coordinate[color_count*2+1] = (i / 3) % width;
-                        ++color_count;
-                    }
-                }
-                for (int i = 0; i < color_count; ++i) {
-                    position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
-                    frame_buffer[position_frame_buffer] = 255;
-                    frame_buffer[position_frame_buffer+1] = 255;
-                    frame_buffer[position_frame_buffer+2] = 255;  
-                }
+                // printf("Move up %d units\n", move_up);
                 for (int i = 0; i < color_count; ++i) {
                     // Move coordinates of colored pixels
                     color_coordinate[i*2] -= move_up;
                 }
-                for (int i = 0; i < color_count; ++i) {
-                    // Write colored pixels back to the frame
-                    position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
-                    frame_buffer[position_frame_buffer] = color_buffer[i*3];
-                    frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
-                    frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
-                }
             }
             if (move_left) {
-                printf("Move left %d units\n\n", move_left);
-                // frame_buffer = processMoveLeft(frame_buffer, width, height, move_left);
-                color_count = 0;
-                for (int i = 0; i < size; i += 3) {
-                    if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
-                        color_buffer[color_count*3] = frame_buffer[i];
-                        color_buffer[color_count*3+1] = frame_buffer[i+1];
-                        color_buffer[color_count*3+2] = frame_buffer[i+2];
-                        color_coordinate[color_count*2] = i / row_index;
-                        color_coordinate[color_count*2+1] = (i / 3) % width;
-                        ++color_count;
-                    }
-                }
-                for (int i = 0; i < color_count; ++i) {
-                    position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
-                    frame_buffer[position_frame_buffer] = 255;
-                    frame_buffer[position_frame_buffer+1] = 255;
-                    frame_buffer[position_frame_buffer+2] = 255;  
-                }
+                // printf("Move left %d units\n\n", move_left);
                 for (int i = 0; i < color_count; ++i) {
                     // Move coordinates of colored pixels
                     color_coordinate[i*2+1] -= move_left;
                 }
-                for (int i = 0; i < color_count; ++i) {
-                    // Write colored pixels back to the frame
-                    position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
-                    frame_buffer[position_frame_buffer] = color_buffer[i*3];
-                    frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
-                    frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
-                }
             }
 
-            
-
+            // Write new colored pixels back to the frame
+            for (int i = 0; i < color_count; ++i) {
+                position_frame_buffer = (color_coordinate[i*2] * width + color_coordinate[i*2+1]) * 3;
+                frame_buffer[position_frame_buffer] = color_buffer[i*3];
+                frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
+                frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
+            }
             verifyFrame(frame_buffer, width, height, grading_mode);
 
             // Clear them up for next iteration
