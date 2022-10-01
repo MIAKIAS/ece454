@@ -1,3 +1,0 @@
-/homes/w/wangw222/ece454/ECE454-Lab2/bin/CMakeFiles/rebuild_cache.dir
-/homes/w/wangw222/ece454/ECE454-Lab2/bin/CMakeFiles/edit_cache.dir
-/homes/w/wangw222/ece454/ECE454-Lab2/bin/CMakeFiles/ECE454_Lab2.dir
