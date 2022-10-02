@@ -19,7 +19,7 @@ struct pixel {
  **********************************************************************************************************************/
 void print_team_info(){
     // Please modify this field with something interesting
-    char team_name[] = "aaa";
+    char team_name[] = "男模编程";
 
     // Please fill in your information
     char student_first_name[] = "Weizhou";
@@ -50,16 +50,18 @@ void print_team_info(){
  **********************************************************************************************************************/
 void implementation_driver(struct kv *sensor_values, int sensor_values_count, unsigned char *frame_buffer,
                            unsigned int width, unsigned int height, bool grading_mode) {
+    // We do not care about the last <25 ones
+    sensor_values_count = sensor_values_count - (sensor_values_count % 25);
     /*******************************************************************************************************************
      * Store only the colored pixels. Furture actions will only change the states of these pixles.
      *******************************************************************************************************************/
     // Count the total number of colored pixels
     int color_count = 0;
-    int size = width * height * 3;
-    int i;
+    int size = width * width * 3;
+    register int i;
 
     // A list stores the colored pixels' RGBs and coordinates
-    struct pixel* color = (struct pixel*)malloc(width * height * sizeof(struct pixel));
+    struct pixel* color = (struct pixel*)malloc(width * width * sizeof(struct pixel));
     // // A list stores the colors of all colored pixels. [R, G, B, R, G, B,......]
     // unsigned char* color_buffer = (unsigned char*)malloc(3 * color_count * sizeof(char));
     // // A list stores the coordinates of all colored pixels. [Row, Col, Row, Col, Row, Col,......]
@@ -69,7 +71,34 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     int position_frame_buffer;
     int row_index = 3 * width;
     // color_count = 0;
-    for (i = 0; i < size; i += 3) {
+    for (i = 0; i < size - 7; i += 9) {
+        if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
+            color[color_count].R = frame_buffer[i];
+            color[color_count].G = frame_buffer[i+1];
+            color[color_count].B = frame_buffer[i+2];
+            color[color_count].row = i / row_index;
+            color[color_count].col = (i / 3) % width;
+            ++color_count;
+        }
+        if (frame_buffer[i+3] != 255 || frame_buffer[i+4] != 255 || frame_buffer[i+5] != 255) {
+            color[color_count].R = frame_buffer[i+3];
+            color[color_count].G = frame_buffer[i+4];
+            color[color_count].B = frame_buffer[i+5];
+            color[color_count].row = (i+3) / row_index;
+            color[color_count].col = (i / 3 + 1) % width;
+            ++color_count;
+        }
+        if (frame_buffer[i+6] != 255 || frame_buffer[i+7] != 255 || frame_buffer[i+8] != 255) {
+            color[color_count].R = frame_buffer[i+6];
+            color[color_count].G = frame_buffer[i+7];
+            color[color_count].B = frame_buffer[i+8];
+            color[color_count].row = (i+6) / row_index;
+            color[color_count].col = (i / 3 + 2) % width;
+            ++color_count;
+        }
+    }
+
+    for (; i < size; i += 3) {
         if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
             color[color_count].R = frame_buffer[i];
             color[color_count].G = frame_buffer[i+1];
@@ -90,7 +119,12 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     bool mirror_y = 0;
     int temp; // For swapping numbers
 
-    for (int sensorValueIdx = 0; sensorValueIdx < sensor_values_count; ++sensorValueIdx) {
+    char key_0;
+    char key_1;
+    int value;
+    struct pixel curr_color;
+    struct kv sensor_value;
+    for (register int sensorValueIdx = 0; sensorValueIdx < sensor_values_count; ++sensorValueIdx) {
         /* Here we accumulate the actions every 25 frames. Since the order of actions matters,
          * (e.g. A Rotation followed by A Moving Up does not equal to A Moving Up followed by A Rotation.)
          * we define that after each 25 frames, we first issue the rotation action, then mirroring,
@@ -99,18 +133,21 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
          * As a result, the later ones need to translate the corresponding actions according to
          * the former ones.
          */
-        char* key = sensor_values[sensorValueIdx].key;
-        int value = sensor_values[sensorValueIdx].value;
-        if (!strcmp(key, "W")) {
+        sensor_value = sensor_values[sensorValueIdx];
+        key_0 = *sensor_value.key;
+        key_1 = *(sensor_value.key + 1);
+        value = sensor_value.value;
+        if (key_0 == 87) { // W
             move_up += value;
-        } else if (!strcmp(key, "A")) {
+        } else if (key_0 == 65) { // A 
             move_left += value;
-        } else if (!strcmp(key, "S")) {
+        } else if (key_0 == 83) { // S
             move_up -= value;
-        } else if (!strcmp(key, "D")) {
+        } else if (key_0 == 68) { // D
             move_left -= value;
-        } else if (!strcmp(key, "CW") || !strcmp(key, "CCW")) {
-            if (!strcmp(key, "CCW")) {
+        } else if (key_0 == 67) { // C for CW AND CCW 
+            // CCW
+            if (key_1 == 67) {
                 value *= -1;
             }
             value %= 4;
@@ -164,12 +201,12 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                 }
             }
             rotate_cw += value;
-        } else if (!strcmp(key, "MX")) {
+        } else if (key_1 == 88) { // MX
             mirror_x = !mirror_x;
             // Translate the Mirroring actions to after the Rotation
             // Move: up->down
             move_up *= -1;
-        } else if (!strcmp(key, "MY")) {
+        } else { // MY
             mirror_y = !mirror_y;
             // Translate the Mirroring actions to after the Rotation
             // Move: left->right, right->left
@@ -177,13 +214,35 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
         }
 
         // Perform one action every 25 frame
-        if ((sensorValueIdx+1) % 25 == 0) {
+        if (!((sensorValueIdx+1) % 25)) {
             // Clean up old colored pixles
-            for (i = 0; i < color_count; ++i) {
-                position_frame_buffer = (color[i].row * width + color[i].col) * 3;
+            for (i = 0; i < color_count - 3; i += 4) {
+                position_frame_buffer = color[i].row * row_index + color[i].col * 3;
                 frame_buffer[position_frame_buffer] = 255;
                 frame_buffer[position_frame_buffer+1] = 255;
-                frame_buffer[position_frame_buffer+2] = 255;  
+                frame_buffer[position_frame_buffer+2] = 255;
+
+                position_frame_buffer = color[i+1].row * row_index + color[i+1].col * 3;
+                frame_buffer[position_frame_buffer] = 255;
+                frame_buffer[position_frame_buffer+1] = 255;
+                frame_buffer[position_frame_buffer+2] = 255;
+
+                position_frame_buffer = color[i+2].row * row_index + color[i+2].col * 3;
+                frame_buffer[position_frame_buffer] = 255;
+                frame_buffer[position_frame_buffer+1] = 255;
+                frame_buffer[position_frame_buffer+2] = 255;
+
+                position_frame_buffer = color[i+3].row * row_index + color[i+3].col * 3;
+                frame_buffer[position_frame_buffer] = 255;
+                frame_buffer[position_frame_buffer+1] = 255;
+                frame_buffer[position_frame_buffer+2] = 255;
+            }
+
+            for (; i < color_count; ++i) {
+                position_frame_buffer = color[i].row * row_index + color[i].col * 3;
+                frame_buffer[position_frame_buffer] = 255;
+                frame_buffer[position_frame_buffer+1] = 255;
+                frame_buffer[position_frame_buffer+2] = 255;
             }
 
             rotate_cw %= 4;
@@ -191,7 +250,7 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                 if (rotate_cw) {
                     // printf("Rotate CW %d degrees", rotate_cw);
                     if (rotate_cw == 2 || rotate_cw == -2) {
-                        color[i].row = height - color[i].row - 1;
+                        color[i].row = width - color[i].row - 1;
                         color[i].col = width - color[i].col - 1;
                     } else if (rotate_cw == 1 || rotate_cw == -3) {
                         temp = color[i].row;
@@ -199,13 +258,13 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                         color[i].col = width - 1 - temp;
                     } else {
                         temp = color[i].row;
-                        color[i].row = height - 1 - color[i].col;
+                        color[i].row = width - 1 - color[i].col;
                         color[i].col = temp;
                     }
                 }
                 if (mirror_x) {
                     // printf("Mirror X\n");
-                    color[i].row = height - color[i].row - 1;
+                    color[i].row = width - color[i].row - 1;
                 }
                 if (mirror_y) {
                     // printf("Mirror Y\n");
@@ -221,13 +280,13 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                 }
 
                 // Write new colored pixels back to the frame
-                position_frame_buffer = (color[i].row * width + color[i].col) * 3;
+                position_frame_buffer = color[i].row * row_index + color[i].col * 3;
                 frame_buffer[position_frame_buffer] = color[i].R;
                 frame_buffer[position_frame_buffer+1] = color[i].G;
                 frame_buffer[position_frame_buffer+2] = color[i].B;
             }
 
-            verifyFrame(frame_buffer, width, height, grading_mode);
+            verifyFrame(frame_buffer, width, width, grading_mode);
 
             // Clear them up for next iteration
             move_up = 0;
