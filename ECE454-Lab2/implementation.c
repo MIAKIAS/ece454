@@ -106,6 +106,7 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     int value;
     // struct pixel curr_color;
     struct kv sensor_value;
+    register int param = width - 1;
     for (register int sensorValueIdx = 0; sensorValueIdx < sensor_values_count; ++sensorValueIdx) {
         /* Here we accumulate the actions every 25 frames. Since the order of actions matters,
          * (e.g. A Rotation followed by A Moving Up does not equal to A Moving Up followed by A Rotation.)
@@ -213,39 +214,36 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
         // Perform one action every 25 frame
         if (!((sensorValueIdx+1) % 25)) {
             // Clean up old colored pixles
-            // FIXME: See which one is faster
             memset(frame_buffer, 255, size);
-            // for (i = 0; i < color_count; ++i) {
-            //     position_frame_buffer = color_coordinate[i*2] * row_index + color_coordinate[i*2+1] * 3;
-            //     memset(frame_buffer+position_frame_buffer, 255, 3);
-            // }
 
             rotate_cw %= 4;
+            register int color_coordinate_row;
+            register int color_coordinate_col;
             for (i = 0; i < color_count; ++i) {
-                register int color_coordinate_row = color_coordinate[i*2];
-                register int color_coordinate_col = color_coordinate[i*2+1];
+                color_coordinate_row = color_coordinate[i*2];
+                color_coordinate_col = color_coordinate[i*2+1];
                 if (rotate_cw) {
                     // printf("Rotate CW %d degrees", rotate_cw);
                     if (rotate_cw == 2 || rotate_cw == -2) {
-                        color_coordinate_row = width - color_coordinate_row - 1;
-                        color_coordinate_col = width - color_coordinate_col - 1;
+                        color_coordinate_row = param - color_coordinate_row;
+                        color_coordinate_col = param - color_coordinate_col;
                     } else if (rotate_cw == 1 || rotate_cw == -3) {
                         temp = color_coordinate_row;
                         color_coordinate_row = color_coordinate_col;
-                        color_coordinate_col = width - 1 - temp;
+                        color_coordinate_col = param - temp;
                     } else {
                         temp = color_coordinate_row;
-                        color_coordinate_row = width - 1 - color_coordinate_col;
+                        color_coordinate_row = param - color_coordinate_col;
                         color_coordinate_col = temp;
                     }
                 }
                 if (mirror_x) {
                     // printf("Mirror X\n");
-                    color_coordinate_row = width - color_coordinate_row - 1;
+                    color_coordinate_row = param - color_coordinate_row;
                 }
                 if (mirror_y) {
                     // printf("Mirror Y\n");
-                    color_coordinate_col = width - color_coordinate_col - 1;
+                    color_coordinate_col = param - color_coordinate_col;
                 }
                 if (move_up) {
                     // printf("Move up %d units\n", move_up);
