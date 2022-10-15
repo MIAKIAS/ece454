@@ -5,14 +5,6 @@
 #include "implementation_reference.h"   // DO NOT REMOVE this line
 #include <stdlib.h>
 
-struct pixel {
-    unsigned char R;
-    unsigned char G;
-    unsigned char B;
-    int row;
-    int col;
-};
-
 /***********************************************************************************************************************
  * WARNING: Do not modify the implementation_driver and team info prototype (name, parameter, return value) !!!
  *          Do not forget to modify the team_name and team member information !!!
@@ -60,12 +52,10 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     int size = width * width * 3;
     register int i;
 
-    // A list stores the colored pixels' RGBs and coordinates
-    struct pixel* color = (struct pixel*)malloc(width * width * sizeof(struct pixel));
-    // // A list stores the colors of all colored pixels. [R, G, B, R, G, B,......]
-    // unsigned char* color_buffer = (unsigned char*)malloc(3 * color_count * sizeof(char));
-    // // A list stores the coordinates of all colored pixels. [Row, Col, Row, Col, Row, Col,......]
-    // int* color_coordinate = (int*)malloc(2 * color_count * sizeof(int));
+    // A list stores the colors of all colored pixels. [R, G, B, R, G, B,......]
+    unsigned char* color_buffer = (unsigned char*)malloc(3 * width * width * sizeof(char));
+    // A list stores the coordinates of all colored pixels. [Row, Col, Row, Col, Row, Col,......]
+    int* color_coordinate = (int*)malloc(2 * width * width * sizeof(int));
 
     // Store the values to the lists
     int position_frame_buffer;
@@ -73,38 +63,38 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     // color_count = 0;
     for (i = 0; i < size - 7; i += 9) {
         if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
-            color[color_count].R = frame_buffer[i];
-            color[color_count].G = frame_buffer[i+1];
-            color[color_count].B = frame_buffer[i+2];
-            color[color_count].row = i / row_index;
-            color[color_count].col = (i / 3) % width;
+            color_buffer[color_count*3] = frame_buffer[i];
+            color_buffer[color_count*3+1] = frame_buffer[i+1];
+            color_buffer[color_count*3+2] = frame_buffer[i+2];
+            color_coordinate[color_count*2] = i / row_index;
+            color_coordinate[color_count*2+1] = (i / 3) % width;
             ++color_count;
         }
         if (frame_buffer[i+3] != 255 || frame_buffer[i+4] != 255 || frame_buffer[i+5] != 255) {
-            color[color_count].R = frame_buffer[i+3];
-            color[color_count].G = frame_buffer[i+4];
-            color[color_count].B = frame_buffer[i+5];
-            color[color_count].row = (i+3) / row_index;
-            color[color_count].col = (i / 3 + 1) % width;
+            color_buffer[color_count*3] = frame_buffer[i+3];
+            color_buffer[color_count*3+1] = frame_buffer[i+4];
+            color_buffer[color_count*3+2] = frame_buffer[i+5];
+            color_coordinate[color_count*2] = (i+3) / row_index;
+            color_coordinate[color_count*2+1] = (i / 3 + 1) % width;
             ++color_count;
         }
         if (frame_buffer[i+6] != 255 || frame_buffer[i+7] != 255 || frame_buffer[i+8] != 255) {
-            color[color_count].R = frame_buffer[i+6];
-            color[color_count].G = frame_buffer[i+7];
-            color[color_count].B = frame_buffer[i+8];
-            color[color_count].row = (i+6) / row_index;
-            color[color_count].col = (i / 3 + 2) % width;
+            color_buffer[color_count*3] = frame_buffer[i+6];
+            color_buffer[color_count*3+1] = frame_buffer[i+7];
+            color_buffer[color_count*3+2] = frame_buffer[i+8];
+            color_coordinate[color_count*2] = (i+6) / row_index;
+            color_coordinate[color_count*2+1] = (i / 3 + 2) % width;
             ++color_count;
         }
     }
 
     for (; i < size; i += 3) {
         if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
-            color[color_count].R = frame_buffer[i];
-            color[color_count].G = frame_buffer[i+1];
-            color[color_count].B = frame_buffer[i+2];
-            color[color_count].row = i / row_index;
-            color[color_count].col = (i / 3) % width;
+            color_buffer[color_count*3] = frame_buffer[i];
+            color_buffer[color_count*3+1] = frame_buffer[i+1];
+            color_buffer[color_count*3+2] = frame_buffer[i+2];
+            color_coordinate[color_count*2] = i / row_index;
+            color_coordinate[color_count*2+1] = (i / 3) % width;
             ++color_count;
         }
     }
@@ -122,7 +112,7 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     char key_0;
     char key_1;
     int value;
-    struct pixel curr_color;
+    // struct pixel curr_color;
     struct kv sensor_value;
     for (register int sensorValueIdx = 0; sensorValueIdx < sensor_values_count; ++sensorValueIdx) {
         /* Here we accumulate the actions every 25 frames. Since the order of actions matters,
@@ -217,29 +207,30 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
         if (!((sensorValueIdx+1) % 25)) {
             // Clean up old colored pixles
             for (i = 0; i < color_count - 3; i += 4) {
-                position_frame_buffer = color[i].row * row_index + color[i].col * 3;
+                position_frame_buffer = color_coordinate[i*2] * row_index + color_coordinate[i*2+1] * 3;
+                // memset(frame_buffer+position_frame_buffer, 255, 3);
                 frame_buffer[position_frame_buffer] = 255;
                 frame_buffer[position_frame_buffer+1] = 255;
                 frame_buffer[position_frame_buffer+2] = 255;
 
-                position_frame_buffer = color[i+1].row * row_index + color[i+1].col * 3;
+                position_frame_buffer = color_coordinate[i*2+2] * row_index + color_coordinate[i*2+3] * 3;
                 frame_buffer[position_frame_buffer] = 255;
                 frame_buffer[position_frame_buffer+1] = 255;
                 frame_buffer[position_frame_buffer+2] = 255;
 
-                position_frame_buffer = color[i+2].row * row_index + color[i+2].col * 3;
+                position_frame_buffer = color_coordinate[i*2+4] * row_index + color_coordinate[i*2+5] * 3;
                 frame_buffer[position_frame_buffer] = 255;
                 frame_buffer[position_frame_buffer+1] = 255;
                 frame_buffer[position_frame_buffer+2] = 255;
 
-                position_frame_buffer = color[i+3].row * row_index + color[i+3].col * 3;
+                position_frame_buffer = color_coordinate[i*2+6] * row_index + color_coordinate[i*2+7] * 3;
                 frame_buffer[position_frame_buffer] = 255;
                 frame_buffer[position_frame_buffer+1] = 255;
                 frame_buffer[position_frame_buffer+2] = 255;
             }
 
             for (; i < color_count; ++i) {
-                position_frame_buffer = color[i].row * row_index + color[i].col * 3;
+                position_frame_buffer = color_coordinate[i*2] * row_index + color_coordinate[i*2+1] * 3;
                 frame_buffer[position_frame_buffer] = 255;
                 frame_buffer[position_frame_buffer+1] = 255;
                 frame_buffer[position_frame_buffer+2] = 255;
@@ -250,40 +241,40 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                 if (rotate_cw) {
                     // printf("Rotate CW %d degrees", rotate_cw);
                     if (rotate_cw == 2 || rotate_cw == -2) {
-                        color[i].row = width - color[i].row - 1;
-                        color[i].col = width - color[i].col - 1;
+                        color_coordinate[i*2] = width - color_coordinate[i*2] - 1;
+                        color_coordinate[i*2+1] = width - color_coordinate[i*2+1] - 1;
                     } else if (rotate_cw == 1 || rotate_cw == -3) {
-                        temp = color[i].row;
-                        color[i].row = color[i].col;
-                        color[i].col = width - 1 - temp;
+                        temp = color_coordinate[i*2];
+                        color_coordinate[i*2] = color_coordinate[i*2+1];
+                        color_coordinate[i*2+1] = width - 1 - temp;
                     } else {
-                        temp = color[i].row;
-                        color[i].row = width - 1 - color[i].col;
-                        color[i].col = temp;
+                        temp = color_coordinate[i*2];
+                        color_coordinate[i*2] = width - 1 - color_coordinate[i*2+1];
+                        color_coordinate[i*2+1] = temp;
                     }
                 }
                 if (mirror_x) {
                     // printf("Mirror X\n");
-                    color[i].row = width - color[i].row - 1;
+                    color_coordinate[i*2] = width - color_coordinate[i*2] - 1;
                 }
                 if (mirror_y) {
                     // printf("Mirror Y\n");
-                    color[i].col = width - color[i].col - 1;
+                    color_coordinate[i*2+1] = width - color_coordinate[i*2+1] - 1;
                 }
                 if (move_up) {
                     // printf("Move up %d units\n", move_up);
-                    color[i].row -= move_up;
+                    color_coordinate[i*2] -= move_up;
                 }
                 if (move_left) {
                     // printf("Move left %d units\n\n", move_left);
-                    color[i].col -= move_left;
+                    color_coordinate[i*2+1] -= move_left;
                 }
 
                 // Write new colored pixels back to the frame
-                position_frame_buffer = color[i].row * row_index + color[i].col * 3;
-                frame_buffer[position_frame_buffer] = color[i].R;
-                frame_buffer[position_frame_buffer+1] = color[i].G;
-                frame_buffer[position_frame_buffer+2] = color[i].B;
+                position_frame_buffer = color_coordinate[i*2] * row_index + color_coordinate[i*2+1] * 3;
+                frame_buffer[position_frame_buffer] = color_buffer[i*3];
+                frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
+                frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
             }
 
             verifyFrame(frame_buffer, width, width, grading_mode);
@@ -296,6 +287,5 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
             mirror_y = 0;
         }
     }
-    free(color);
     return;
 }
