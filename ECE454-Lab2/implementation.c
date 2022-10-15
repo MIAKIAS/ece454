@@ -119,80 +119,95 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
         key_0 = *sensor_value.key;
         key_1 = *(sensor_value.key + 1);
         value = sensor_value.value;
-        if (key_0 == 87) { // W
-            move_up += value;
-        } else if (key_0 == 65) { // A 
-            move_left += value;
-        } else if (key_0 == 83) { // S
-            move_up -= value;
-        } else if (key_0 == 68) { // D
-            move_left -= value;
-        } else if (key_0 == 67) { // C for CW AND CCW 
-            // CCW
-            if (key_1 == 67) {
-                value *= -1;
-            }
-            value %= 4;
-            // Rotate CW 90 degrees
-            if (value == 1 || value == -3) {
-                value = 1;
-                // Translate the Moving actions to after the Rotation
-                // Move: left->up, down->left
-                temp = move_up;
-                move_up = move_left;
-                move_left = -1 * temp;
-                // Translate the Mirroring actions to after the Rotation
-                // Flip: X->Y, Y->X
-                temp = mirror_y;
-                if (mirror_x) {
-                    mirror_x = !mirror_x;
-                    mirror_y = !mirror_y;
+        switch (key_0) {
+            case 87: // W
+                move_up += value;
+                break;
+            case 65: // A
+                move_left += value;
+                break;
+            case 83: // S
+                move_up -= value;
+                break;
+            case 68: // D
+                move_left -= value;
+                break;
+            case 67: // C for CW AND CCW
+                // CCW
+                if (key_1 == 67) {
+                    value *= -1;
                 }
-                if (temp) {
-                    mirror_y = !mirror_y;
-                    mirror_x = !mirror_x;
-                }
-            // Rotate 180 degrees
-            } else if (value == 2 || value == -2) {
-                // Same as MX + MY
-                value = 0;
-                // Translate the Moving actions to after the Rotation
-                move_left *= -1;
-                move_up *= -1;
+                value %= 4;
+                switch (value) {
+                    // Rotate CW 90 degrees
+                    case 1: 
+                    case -3:
+                        value = 1;
+                        // Translate the Moving actions to after the Rotation
+                        // Move: left->up, down->left
+                        temp = move_up;
+                        move_up = move_left;
+                        move_left = -1 * temp;
+                        // Translate the Mirroring actions to after the Rotation
+                        // Flip: X->Y, Y->X
+                        temp = mirror_y;
+                        if (mirror_x) {
+                            mirror_x = !mirror_x;
+                            mirror_y = !mirror_y;
+                        }
+                        if (temp) {
+                            mirror_y = !mirror_y;
+                            mirror_x = !mirror_x;
+                        }
+                        break;
+                    // Rotate 180 degrees
+                    case 2: 
+                    case -2:
+                        // Same as MX + MY
+                        value = 0;
+                        // Translate the Moving actions to after the Rotation
+                        move_left *= -1;
+                        move_up *= -1;
 
-                mirror_x = !mirror_x;
-                mirror_y = !mirror_y;
-            // Rotate CCW 90 degrees
-            } else if (value == 3 || value == -1){
-                value = -1;
-                // Translate the Moving actions to after the Rotation
-                // Move: right->up, up->left
-                temp = move_up;
-                move_up = -1 * move_left;
-                move_left = temp;
-                // Translate the Mirroring actions to after the Rotation
-                // Flip: X->Y, Y->X
-                temp = mirror_y;
-                if (mirror_x) {
-                    mirror_x = !mirror_x;
-                    mirror_y = !mirror_y;
+                        mirror_x = !mirror_x;
+                        mirror_y = !mirror_y;
+                        break;
+                    // Rotate CCW 90 degrees
+                    case 3:
+                    case -1:
+                        value = -1;
+                        // Translate the Moving actions to after the Rotation
+                        // Move: right->up, up->left
+                        temp = move_up;
+                        move_up = -1 * move_left;
+                        move_left = temp;
+                        // Translate the Mirroring actions to after the Rotation
+                        // Flip: X->Y, Y->X
+                        temp = mirror_y;
+                        if (mirror_x) {
+                            mirror_x = !mirror_x;
+                            mirror_y = !mirror_y;
+                        }
+                        if (temp) {
+                            mirror_y = !mirror_y;
+                            mirror_x = !mirror_x;
+                        }
+                        break;
                 }
-                if (temp) {
-                    mirror_y = !mirror_y;
+                rotate_cw += value;
+                break;
+            default:
+                if (key_1 == 88) { // MX
                     mirror_x = !mirror_x;
+                    // Translate the Mirroring actions to after the Rotation
+                    // Move: up->down
+                    move_up *= -1;
+                } else { // MY
+                    mirror_y = !mirror_y;
+                    // Translate the Mirroring actions to after the Rotation
+                    // Move: left->right, right->left
+                    move_left *= -1;
                 }
-            }
-            rotate_cw += value;
-        } else if (key_1 == 88) { // MX
-            mirror_x = !mirror_x;
-            // Translate the Mirroring actions to after the Rotation
-            // Move: up->down
-            move_up *= -1;
-        } else { // MY
-            mirror_y = !mirror_y;
-            // Translate the Mirroring actions to after the Rotation
-            // Move: left->right, right->left
-            move_left *= -1;
         }
 
         // Perform one action every 25 frame
@@ -249,14 +264,14 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                 memcpy(frame_buffer + position_frame_buffer, color_buffer + i*3, 3);
             }
 
-            verifyFrame(frame_buffer, width, width, grading_mode);
-
             // Clear them up for next iteration
             move_up = 0;
             move_left = 0;
             rotate_cw = 0;
             mirror_x= 0;
             mirror_y = 0;
+
+            verifyFrame(frame_buffer, width, width, grading_mode);
         }
     }
     return;
