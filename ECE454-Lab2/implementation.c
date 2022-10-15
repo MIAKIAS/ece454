@@ -63,25 +63,19 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     // color_count = 0;
     for (i = 0; i < size - 7; i += 9) {
         if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
-            color_buffer[color_count*3] = frame_buffer[i];
-            color_buffer[color_count*3+1] = frame_buffer[i+1];
-            color_buffer[color_count*3+2] = frame_buffer[i+2];
+            memcpy(color_buffer+color_count*3, frame_buffer+i, 3);
             color_coordinate[color_count*2] = i / row_index;
             color_coordinate[color_count*2+1] = (i / 3) % width;
             ++color_count;
         }
         if (frame_buffer[i+3] != 255 || frame_buffer[i+4] != 255 || frame_buffer[i+5] != 255) {
-            color_buffer[color_count*3] = frame_buffer[i+3];
-            color_buffer[color_count*3+1] = frame_buffer[i+4];
-            color_buffer[color_count*3+2] = frame_buffer[i+5];
+            memcpy(color_buffer+color_count*3, frame_buffer+i+3, 3);
             color_coordinate[color_count*2] = (i+3) / row_index;
             color_coordinate[color_count*2+1] = (i / 3 + 1) % width;
             ++color_count;
         }
         if (frame_buffer[i+6] != 255 || frame_buffer[i+7] != 255 || frame_buffer[i+8] != 255) {
-            color_buffer[color_count*3] = frame_buffer[i+6];
-            color_buffer[color_count*3+1] = frame_buffer[i+7];
-            color_buffer[color_count*3+2] = frame_buffer[i+8];
+            memcpy(color_buffer+color_count*3, frame_buffer+i+6, 3);
             color_coordinate[color_count*2] = (i+6) / row_index;
             color_coordinate[color_count*2+1] = (i / 3 + 2) % width;
             ++color_count;
@@ -90,9 +84,7 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
 
     for (; i < size; i += 3) {
         if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
-            color_buffer[color_count*3] = frame_buffer[i];
-            color_buffer[color_count*3+1] = frame_buffer[i+1];
-            color_buffer[color_count*3+2] = frame_buffer[i+2];
+            memcpy(color_buffer+color_count*3, frame_buffer+i, 3);
             color_coordinate[color_count*2] = i / row_index;
             color_coordinate[color_count*2+1] = (i / 3) % width;
             ++color_count;
@@ -206,75 +198,55 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
         // Perform one action every 25 frame
         if (!((sensorValueIdx+1) % 25)) {
             // Clean up old colored pixles
-            for (i = 0; i < color_count - 3; i += 4) {
-                position_frame_buffer = color_coordinate[i*2] * row_index + color_coordinate[i*2+1] * 3;
-                // memset(frame_buffer+position_frame_buffer, 255, 3);
-                frame_buffer[position_frame_buffer] = 255;
-                frame_buffer[position_frame_buffer+1] = 255;
-                frame_buffer[position_frame_buffer+2] = 255;
-
-                position_frame_buffer = color_coordinate[i*2+2] * row_index + color_coordinate[i*2+3] * 3;
-                frame_buffer[position_frame_buffer] = 255;
-                frame_buffer[position_frame_buffer+1] = 255;
-                frame_buffer[position_frame_buffer+2] = 255;
-
-                position_frame_buffer = color_coordinate[i*2+4] * row_index + color_coordinate[i*2+5] * 3;
-                frame_buffer[position_frame_buffer] = 255;
-                frame_buffer[position_frame_buffer+1] = 255;
-                frame_buffer[position_frame_buffer+2] = 255;
-
-                position_frame_buffer = color_coordinate[i*2+6] * row_index + color_coordinate[i*2+7] * 3;
-                frame_buffer[position_frame_buffer] = 255;
-                frame_buffer[position_frame_buffer+1] = 255;
-                frame_buffer[position_frame_buffer+2] = 255;
-            }
-
-            for (; i < color_count; ++i) {
-                position_frame_buffer = color_coordinate[i*2] * row_index + color_coordinate[i*2+1] * 3;
-                frame_buffer[position_frame_buffer] = 255;
-                frame_buffer[position_frame_buffer+1] = 255;
-                frame_buffer[position_frame_buffer+2] = 255;
-            }
+            // FIXME: See which one is faster
+            memset(frame_buffer, 255, size);
+            // for (i = 0; i < color_count; ++i) {
+            //     position_frame_buffer = color_coordinate[i*2] * row_index + color_coordinate[i*2+1] * 3;
+            //     memset(frame_buffer+position_frame_buffer, 255, 3);
+            // }
 
             rotate_cw %= 4;
             for (i = 0; i < color_count; ++i) {
+                register int color_coordinate_row = color_coordinate[i*2];
+                register int color_coordinate_col = color_coordinate[i*2+1];
                 if (rotate_cw) {
                     // printf("Rotate CW %d degrees", rotate_cw);
                     if (rotate_cw == 2 || rotate_cw == -2) {
-                        color_coordinate[i*2] = width - color_coordinate[i*2] - 1;
-                        color_coordinate[i*2+1] = width - color_coordinate[i*2+1] - 1;
+                        color_coordinate_row = width - color_coordinate_row - 1;
+                        color_coordinate_col = width - color_coordinate_col - 1;
                     } else if (rotate_cw == 1 || rotate_cw == -3) {
-                        temp = color_coordinate[i*2];
-                        color_coordinate[i*2] = color_coordinate[i*2+1];
-                        color_coordinate[i*2+1] = width - 1 - temp;
+                        temp = color_coordinate_row;
+                        color_coordinate_row = color_coordinate_col;
+                        color_coordinate_col = width - 1 - temp;
                     } else {
-                        temp = color_coordinate[i*2];
-                        color_coordinate[i*2] = width - 1 - color_coordinate[i*2+1];
-                        color_coordinate[i*2+1] = temp;
+                        temp = color_coordinate_row;
+                        color_coordinate_row = width - 1 - color_coordinate_col;
+                        color_coordinate_col = temp;
                     }
                 }
                 if (mirror_x) {
                     // printf("Mirror X\n");
-                    color_coordinate[i*2] = width - color_coordinate[i*2] - 1;
+                    color_coordinate_row = width - color_coordinate_row - 1;
                 }
                 if (mirror_y) {
                     // printf("Mirror Y\n");
-                    color_coordinate[i*2+1] = width - color_coordinate[i*2+1] - 1;
+                    color_coordinate_col = width - color_coordinate_col - 1;
                 }
                 if (move_up) {
                     // printf("Move up %d units\n", move_up);
-                    color_coordinate[i*2] -= move_up;
+                    color_coordinate_row -= move_up;
                 }
                 if (move_left) {
                     // printf("Move left %d units\n\n", move_left);
-                    color_coordinate[i*2+1] -= move_left;
+                    color_coordinate_col -= move_left;
                 }
 
+                color_coordinate[i*2] = color_coordinate_row;
+                color_coordinate[i*2+1] = color_coordinate_col;
+
                 // Write new colored pixels back to the frame
-                position_frame_buffer = color_coordinate[i*2] * row_index + color_coordinate[i*2+1] * 3;
-                frame_buffer[position_frame_buffer] = color_buffer[i*3];
-                frame_buffer[position_frame_buffer+1] = color_buffer[i*3+1];
-                frame_buffer[position_frame_buffer+2] = color_buffer[i*3+2];
+                position_frame_buffer = color_coordinate_row * row_index + color_coordinate_col * 3;
+                memcpy(frame_buffer + position_frame_buffer, color_buffer + i*3, 3);
             }
 
             verifyFrame(frame_buffer, width, width, grading_mode);
