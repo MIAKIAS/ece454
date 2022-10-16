@@ -212,12 +212,61 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
             memset(frame_buffer, 255, size);
 
             rotate_cw %= 4;
-            register int color_coordinate_row;
-            register int color_coordinate_col;
-            // FIXME: Unroll
-            for (i = 0; i < color_count; ++i) {
-                color_coordinate_row = color_coordinate_rows[i];
-                color_coordinate_col = color_coordinate_cols[i];
+            register int unroll = color_count - 7;
+            __m256i params =_mm256_set1_epi32(param);
+            for (i = 0; i < unroll; i+=8) {
+                __m256i rows = _mm256_loadu_si256((const __m256i *)(color_coordinate_rows+i));
+                __m256i cols = _mm256_loadu_si256((const __m256i *)(color_coordinate_cols+i));
+                
+                if (rotate_cw) {
+                    // printf("Rotate CW %d degrees", rotate_cw);
+                    if (rotate_cw == 2 || rotate_cw == -2) {
+                        rows = _mm256_sub_epi32(params, rows);
+                        cols = _mm256_sub_epi32(params, cols);
+                    } else if (rotate_cw == 1 || rotate_cw == -3) {
+                        __m256i temps = rows;
+                        rows = cols;
+                        cols = _mm256_sub_epi32(params, temps);
+                    } else {
+                        __m256i temps = rows;
+                        rows = _mm256_sub_epi32(params, cols);
+                        cols = rows;
+                    }
+                }
+                if (mirror_x) {
+                    // printf("Mirror X\n");
+                    rows = _mm256_sub_epi32(params, rows);
+                }
+                if (mirror_y) {
+                    // printf("Mirror Y\n");
+                    cols = _mm256_sub_epi32(params, cols);
+                }
+                if (move_up) {
+                    // printf("Move up %d units\n", move_up);
+                    rows = _mm256_sub_epi32(rows, _mm256_set1_epi32(move_up));
+                }
+                if (move_left) {
+                    // printf("Move left %d units\n\n", move_left);
+                    cols = _mm256_sub_epi32(cols, _mm256_set1_epi32(move_left));
+                }
+
+                // memcpy(color_coordinate+index, &color_coordinate_col_3, 24);
+                _mm256_storeu_si256((__m256i*)(color_coordinate_rows+i), rows);
+                _mm256_storeu_si256((__m256i*)(color_coordinate_cols+i), cols);
+
+                unsigned char* location = color_buffer + i*3;
+                memcpy(frame_buffer + color_coordinate_rows[i] * row_index + color_coordinate_cols[i] * 3, location, 3);
+                memcpy(frame_buffer + color_coordinate_rows[i+1] * row_index + color_coordinate_cols[i+1] * 3, location+3, 3);
+                memcpy(frame_buffer + color_coordinate_rows[i+2] * row_index + color_coordinate_cols[i+2] * 3, location+6, 3);
+                memcpy(frame_buffer + color_coordinate_rows[i+3] * row_index + color_coordinate_cols[i+3] * 3, location+9, 3);
+                memcpy(frame_buffer + color_coordinate_rows[i+4] * row_index + color_coordinate_cols[i+4] * 3, location+12, 3);
+                memcpy(frame_buffer + color_coordinate_rows[i+5] * row_index + color_coordinate_cols[i+5] * 3, location+15, 3);
+                memcpy(frame_buffer + color_coordinate_rows[i+6] * row_index + color_coordinate_cols[i+6] * 3, location+18, 3);
+                memcpy(frame_buffer + color_coordinate_rows[i+7] * row_index + color_coordinate_cols[i+7] * 3, location+21, 3);
+            }
+            for (; i < color_count; ++i) {
+                register int color_coordinate_row = color_coordinate_rows[i];
+                register int color_coordinate_col = color_coordinate_cols[i];
                 if (rotate_cw) {
                     // printf("Rotate CW %d degrees", rotate_cw);
                     if (rotate_cw == 2 || rotate_cw == -2) {
