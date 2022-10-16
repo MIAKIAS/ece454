@@ -59,7 +59,8 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     // A list stores the colors of all colored pixels. [R, G, B, R, G, B,......]
     unsigned char* color_buffer = (unsigned char*)malloc(size);
     // A list stores the coordinates of all colored pixels. [Row, Col, Row, Col, Row, Col,......]
-    int* color_coordinate = (int*)malloc(8 * width * width);
+    int* color_coordinate_rows = (int*)malloc(4 * width * width);
+    int* color_coordinate_cols = (int*)malloc(4 * width * width);
     
 
     // Store the values to the lists
@@ -76,8 +77,8 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                 if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
                     // memcpy(color_buffer+color_count*3, frame_buffer+i, 3);
                     *(int*)(color_buffer+color_count*3) = *((int*)(frame_buffer+i))&0x00ffffff;
-                    color_coordinate[color_count*2] = row;
-                    color_coordinate[color_count*2+1] = col;
+                    color_coordinate_rows[color_count] = row;
+                    color_coordinate_cols[color_count] = col;
                     ++color_count;
                 }
                 i += 3;
@@ -215,8 +216,8 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
             register int color_coordinate_col;
             // FIXME: Unroll
             for (i = 0; i < color_count; ++i) {
-                color_coordinate_row = color_coordinate[i*2];
-                color_coordinate_col = color_coordinate[i*2+1];
+                color_coordinate_row = color_coordinate_rows[i];
+                color_coordinate_col = color_coordinate_cols[i];
                 if (rotate_cw) {
                     // printf("Rotate CW %d degrees", rotate_cw);
                     if (rotate_cw == 2 || rotate_cw == -2) {
@@ -249,8 +250,8 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                     color_coordinate_col -= move_left;
                 }
 
-                color_coordinate[i*2] = color_coordinate_row;
-                color_coordinate[i*2+1] = color_coordinate_col;
+                color_coordinate_rows[i] = color_coordinate_row;
+                color_coordinate_cols[i] = color_coordinate_col;
 
                 // Write new colored pixels back to the frame
                 position_frame_buffer = color_coordinate_row * row_index + color_coordinate_col * 3;
