@@ -4,6 +4,10 @@
 #include "utilities.h"  // DO NOT REMOVE this line
 #include "implementation_reference.h"   // DO NOT REMOVE this line
 #include <stdlib.h>
+#include "immintrin.h"
+#pragma GCC target ("avx,avx2")
+__attribute__((always_inline))
+
 
 /***********************************************************************************************************************
  * WARNING: Do not modify the implementation_driver and team info prototype (name, parameter, return value) !!!
@@ -56,20 +60,28 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     unsigned char* color_buffer = (unsigned char*)malloc(size);
     // A list stores the coordinates of all colored pixels. [Row, Col, Row, Col, Row, Col,......]
     int* color_coordinate = (int*)malloc(8 * width * width);
+    
 
     // Store the values to the lists
     int position_frame_buffer;
     int row_index = 3 * width;
+    unsigned char* row_of_blank = (unsigned char*)malloc(row_index);
+    memset(row_of_blank, 255, row_index);
     // color_count = 0;
     for (register int row = 0; row < width; ++row) {
-        for (register int col = 0; col < width; ++col) {
-            if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
-                memcpy(color_buffer+color_count*3, frame_buffer+i, 3);
-                color_coordinate[color_count*2] = row;
-                color_coordinate[color_count*2+1] = col;
-                ++color_count;
+        if (memcmp(frame_buffer+i, row_of_blank, row_index) == 0) {
+            i += row_index;
+        } else {
+            for (register int col = 0; col < width; ++col) {
+                if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
+                    // memcpy(color_buffer+color_count*3, frame_buffer+i, 3);
+                    *(int*)(color_buffer+color_count*3) = *((int*)(frame_buffer+i))&0x00ffffff;
+                    color_coordinate[color_count*2] = row;
+                    color_coordinate[color_count*2+1] = col;
+                    ++color_count;
+                }
+                i += 3;
             }
-            i += 3;
         }
     }
 
