@@ -53,16 +53,16 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     register int i = 0;
 
     // A list stores the colors of all colored pixels. [R, G, B, R, G, B,......]
-    unsigned char* color_buffer = (unsigned char*)malloc(3 * width * width * sizeof(char));
+    unsigned char* color_buffer = (unsigned char*)malloc(size);
     // A list stores the coordinates of all colored pixels. [Row, Col, Row, Col, Row, Col,......]
-    int* color_coordinate = (int*)malloc(2 * width * width * sizeof(int));
+    int* color_coordinate = (int*)malloc(8 * width * width);
 
     // Store the values to the lists
     int position_frame_buffer;
     int row_index = 3 * width;
     // color_count = 0;
-    for (int row = 0; row < width; ++row) {
-        for (int col = 0; col < width; ++col) {
+    for (register int row = 0; row < width; ++row) {
+        for (register int col = 0; col < width; ++col) {
             if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
                 memcpy(color_buffer+color_count*3, frame_buffer+i, 3);
                 color_coordinate[color_count*2] = row;
@@ -201,6 +201,7 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
             rotate_cw %= 4;
             register int color_coordinate_row;
             register int color_coordinate_col;
+            // FIXME: Unroll
             for (i = 0; i < color_count; ++i) {
                 color_coordinate_row = color_coordinate[i*2];
                 color_coordinate_col = color_coordinate[i*2+1];
