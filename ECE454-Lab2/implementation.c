@@ -230,7 +230,7 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                     } else {
                         __m256i temps = rows;
                         rows = _mm256_sub_epi32(params, cols);
-                        cols = rows;
+                        cols = temps;
                     }
                 }
                 if (mirror_x) {
