@@ -50,7 +50,7 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     // Count the total number of colored pixels
     int color_count = 0;
     int size = width * width * 3;
-    register int i;
+    register int i = 0;
 
     // A list stores the colors of all colored pixels. [R, G, B, R, G, B,......]
     unsigned char* color_buffer = (unsigned char*)malloc(3 * width * width * sizeof(char));
@@ -61,33 +61,15 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     int position_frame_buffer;
     int row_index = 3 * width;
     // color_count = 0;
-    for (i = 0; i < size - 7; i += 9) {
-        if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
-            memcpy(color_buffer+color_count*3, frame_buffer+i, 3);
-            color_coordinate[color_count*2] = i / row_index;
-            color_coordinate[color_count*2+1] = (i / 3) % width;
-            ++color_count;
-        }
-        if (frame_buffer[i+3] != 255 || frame_buffer[i+4] != 255 || frame_buffer[i+5] != 255) {
-            memcpy(color_buffer+color_count*3, frame_buffer+i+3, 3);
-            color_coordinate[color_count*2] = (i+3) / row_index;
-            color_coordinate[color_count*2+1] = (i / 3 + 1) % width;
-            ++color_count;
-        }
-        if (frame_buffer[i+6] != 255 || frame_buffer[i+7] != 255 || frame_buffer[i+8] != 255) {
-            memcpy(color_buffer+color_count*3, frame_buffer+i+6, 3);
-            color_coordinate[color_count*2] = (i+6) / row_index;
-            color_coordinate[color_count*2+1] = (i / 3 + 2) % width;
-            ++color_count;
-        }
-    }
-
-    for (; i < size; i += 3) {
-        if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
-            memcpy(color_buffer+color_count*3, frame_buffer+i, 3);
-            color_coordinate[color_count*2] = i / row_index;
-            color_coordinate[color_count*2+1] = (i / 3) % width;
-            ++color_count;
+    for (int row = 0; row < width; ++row) {
+        for (int col = 0; col < width; ++col) {
+            if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
+                memcpy(color_buffer+color_count*3, frame_buffer+i, 3);
+                color_coordinate[color_count*2] = row;
+                color_coordinate[color_count*2+1] = col;
+                ++color_count;
+            }
+            i += 3;
         }
     }
 
