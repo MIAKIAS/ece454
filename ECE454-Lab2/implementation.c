@@ -124,6 +124,9 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     struct kv sensor_value;
     register int param = width - 1;
     __m256i params =_mm256_set1_epi32(param);
+    __m256i row_indexs = _mm256_set1_epi32(row_index);
+    __m256i threes = _mm256_set1_epi32(3);
+    int buffer_location[8];
     // We do not care about the last <25 ones
     sensor_values_count = sensor_values_count - (sensor_values_count % 25);
     register int unroll = color_count - 7;
@@ -237,6 +240,8 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
             memset(frame_buffer, 255, size);
 
             rotate_cw %= 4;
+            __m256i move_ups = _mm256_set1_epi32(move_up);
+            __m256i move_lefts = _mm256_set1_epi32(move_left);
             for (i = 0; i < unroll; i+=8) {
                 __m256i rows = _mm256_loadu_si256((const __m256i *)(color_coordinate_rows+i));
                 __m256i cols = _mm256_loadu_si256((const __m256i *)(color_coordinate_cols+i));
@@ -266,11 +271,11 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                 }
                 if (move_up) {
                     // printf("Move up %d units\n", move_up);
-                    rows = _mm256_sub_epi32(rows, _mm256_set1_epi32(move_up));
+                    rows = _mm256_sub_epi32(rows, move_ups);
                 }
                 if (move_left) {
                     // printf("Move left %d units\n\n", move_left);
-                    cols = _mm256_sub_epi32(cols, _mm256_set1_epi32(move_left));
+                    cols = _mm256_sub_epi32(cols, move_lefts);
                 }
 
                 // memcpy(color_coordinate+index, &color_coordinate_col_3, 24);
@@ -278,14 +283,15 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                 _mm256_storeu_si256((__m256i*)(color_coordinate_cols+i), cols);
 
                 unsigned char* location = color_buffer + i*3;
-                memcpy(frame_buffer + color_coordinate_rows[i] * row_index + color_coordinate_cols[i] * 3, location, 3);
-                memcpy(frame_buffer + color_coordinate_rows[i+1] * row_index + color_coordinate_cols[i+1] * 3, location+3, 3);
-                memcpy(frame_buffer + color_coordinate_rows[i+2] * row_index + color_coordinate_cols[i+2] * 3, location+6, 3);
-                memcpy(frame_buffer + color_coordinate_rows[i+3] * row_index + color_coordinate_cols[i+3] * 3, location+9, 3);
-                memcpy(frame_buffer + color_coordinate_rows[i+4] * row_index + color_coordinate_cols[i+4] * 3, location+12, 3);
-                memcpy(frame_buffer + color_coordinate_rows[i+5] * row_index + color_coordinate_cols[i+5] * 3, location+15, 3);
-                memcpy(frame_buffer + color_coordinate_rows[i+6] * row_index + color_coordinate_cols[i+6] * 3, location+18, 3);
-                memcpy(frame_buffer + color_coordinate_rows[i+7] * row_index + color_coordinate_cols[i+7] * 3, location+21, 3);
+                _mm256_storeu_si256((__m256i*)buffer_location, _mm256_add_epi32(_mm256_mullo_epi32(rows, row_indexs), _mm256_mullo_epi32(cols, threes)));
+                memcpy(frame_buffer + buffer_location[0], location, 3);
+                memcpy(frame_buffer + buffer_location[1], location+3, 3);
+                memcpy(frame_buffer + buffer_location[2], location+6, 3);
+                memcpy(frame_buffer + buffer_location[3], location+9, 3);
+                memcpy(frame_buffer + buffer_location[4], location+12, 3);
+                memcpy(frame_buffer + buffer_location[5], location+15, 3);
+                memcpy(frame_buffer + buffer_location[6], location+18, 3);
+                memcpy(frame_buffer + buffer_location[7], location+21, 3);
             }
             for (; i < color_count; ++i) {
                 register int color_coordinate_row = color_coordinate_rows[i];
