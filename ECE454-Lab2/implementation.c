@@ -8,7 +8,11 @@
 #pragma GCC target ("avx,avx2")
 #define piece_ratio 15
 
-
+struct frame_color {
+    unsigned char R;
+    unsigned char G;
+    unsigned char B;
+};
 /***********************************************************************************************************************
  * WARNING: Do not modify the implementation_driver and team info prototype (name, parameter, return value) !!!
  *          Do not forget to modify the team_name and team member information !!!
@@ -51,61 +55,67 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
      *******************************************************************************************************************/
     // Count the total number of colored pixels
     int color_count = 0;
-    int size = width * width * 3;
+    int size = width * width;
     register int i = 0;
+    struct frame_color* frame = (struct frame_color*)frame_buffer;
 
     // A list stores the colors of all colored pixels. [R, G, B, R, G, B,......]
-    unsigned char* color_buffer = (unsigned char*)malloc(size);
+    struct frame_color* color_buffer = (struct frame_color*)malloc(size);
     // A list stores the coordinates of all colored pixels. [Row, Col, Row, Col, Row, Col,......]
     int* color_coordinate_rows = (int*)malloc(4 * width * width);
     int* color_coordinate_cols = (int*)malloc(4 * width * width);
     
 
-    // Store the values to the lists
-    int position_frame_buffer;
-    int row_index = 3 * width;
+    // int row_index = 3 * width;
     int piece_width = width / piece_ratio;
     int piece_length = piece_width * 3;
     int offset_rest = 3 * (width % piece_ratio);
+    int offset_rest_length = width % piece_ratio;
     unsigned char* piece_of_blank = (unsigned char*)malloc(piece_length);
     memset(piece_of_blank, 255, piece_length);
-    // color_count = 0;
-    for (register int row = 0; row < width; ++row) {
-        register int col = 0;
-        for (register int piece = 0; piece < piece_ratio; ++piece) {
-            if (!memcmp(frame_buffer+i, piece_of_blank, piece_length)) {
-                col += piece_width;
-                i += piece_length;
-            } else {
-                for (register int j = 0; j < piece_length; j += 3) {
-                    if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
+    {
+        register struct frame_color temp_buffer;
+        // color_count = 0;
+        for (register int row = 0; row < width; ++row) {
+            register int col = 0;
+            for (register int piece = 0; piece < piece_ratio; ++piece) {
+                if (!memcmp(frame+i, piece_of_blank, piece_length)) {
+                    col += piece_width;
+                    i += piece_width;
+                } else {
+                    for (register int j = 0; j < piece_length; j += 3) {
+                        temp_buffer = frame[i];
+                        if (temp_buffer.R != 255 || temp_buffer.G != 255 || temp_buffer.B != 255) {
+                            // memcpy(color_buffer+color_count*3, frame_buffer+i, 3);
+                            color_buffer[color_count] = temp_buffer;
+                            color_coordinate_rows[color_count] = row;
+                            color_coordinate_cols[color_count] = col;
+                            ++color_count;
+                        }
+                        ++i;
+                        ++col;
+                    }
+                }
+            }
+            if (memcmp(frame+i, piece_of_blank, offset_rest)) {
+                for (; col < width; ++col) {
+                    temp_buffer = frame[i];
+                    if (temp_buffer.R != 255 || temp_buffer.G != 255 || temp_buffer.B != 255) {
                         // memcpy(color_buffer+color_count*3, frame_buffer+i, 3);
-                        *(int*)(color_buffer+color_count*3) = *((int*)(frame_buffer+i))&0x00ffffff;
+                        color_buffer[color_count] = temp_buffer;
                         color_coordinate_rows[color_count] = row;
                         color_coordinate_cols[color_count] = col;
                         ++color_count;
                     }
-                    i += 3;
-                    ++col;
+                    ++i;
                 }
+            } else {
+                i += offset_rest_length;
             }
+            
         }
-        if (memcmp(frame_buffer+i, piece_of_blank, offset_rest)) {
-            for (; col < width; ++col) {
-                if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
-                    // memcpy(color_buffer+color_count*3, frame_buffer+i, 3);
-                    *(int*)(color_buffer+color_count*3) = *((int*)(frame_buffer+i))&0x00ffffff;
-                    color_coordinate_rows[color_count] = row;
-                    color_coordinate_cols[color_count] = col;
-                    ++color_count;
-                }
-                i += 3;
-            }
-        } else {
-            i += offset_rest;
-        }
-        
     }
+    
 
     /*******************************************************************************************************************
      * Summarize the actions performed in 25 frames into one frame
@@ -124,8 +134,7 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     struct kv sensor_value;
     register int param = width - 1;
     __m256i params =_mm256_set1_epi32(param);
-    __m256i row_indexs = _mm256_set1_epi32(row_index);
-    __m256i threes = _mm256_set1_epi32(3);
+    __m256i widths = _mm256_set1_epi32(width);
     int buffer_location[8];
     // We do not care about the last <25 ones
     sensor_values_count = sensor_values_count - (sensor_values_count % 25);
@@ -237,7 +246,7 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
         // Perform one action every 25 frame
         if (!((sensorValueIdx+1) % 25)) {
             // Clean up old colored pixles
-            memset(frame_buffer, 255, size);
+            memset(frame, 255, size*3);
 
             rotate_cw %= 4;
             __m256i move_ups = _mm256_set1_epi32(move_up);
@@ -282,16 +291,16 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                 _mm256_storeu_si256((__m256i*)(color_coordinate_rows+i), rows);
                 _mm256_storeu_si256((__m256i*)(color_coordinate_cols+i), cols);
 
-                unsigned char* location = color_buffer + i*3;
-                _mm256_storeu_si256((__m256i*)buffer_location, _mm256_add_epi32(_mm256_mullo_epi32(rows, row_indexs), _mm256_mullo_epi32(cols, threes)));
-                memcpy(frame_buffer + buffer_location[0], location, 3);
-                memcpy(frame_buffer + buffer_location[1], location+3, 3);
-                memcpy(frame_buffer + buffer_location[2], location+6, 3);
-                memcpy(frame_buffer + buffer_location[3], location+9, 3);
-                memcpy(frame_buffer + buffer_location[4], location+12, 3);
-                memcpy(frame_buffer + buffer_location[5], location+15, 3);
-                memcpy(frame_buffer + buffer_location[6], location+18, 3);
-                memcpy(frame_buffer + buffer_location[7], location+21, 3);
+                struct frame_color* location = color_buffer + i;
+                _mm256_storeu_si256((__m256i*)buffer_location, _mm256_add_epi32(_mm256_mullo_epi32(rows, widths), cols));
+                memcpy(frame + buffer_location[0], location, 3);
+                memcpy(frame + buffer_location[1], location+1, 3);
+                memcpy(frame + buffer_location[2], location+2, 3);
+                memcpy(frame + buffer_location[3], location+3, 3);
+                memcpy(frame + buffer_location[4], location+4, 3);
+                memcpy(frame + buffer_location[5], location+5, 3);
+                memcpy(frame + buffer_location[6], location+6, 3);
+                memcpy(frame + buffer_location[7], location+7, 3);
             }
             for (; i < color_count; ++i) {
                 register int color_coordinate_row = color_coordinate_rows[i];
@@ -332,7 +341,7 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                 color_coordinate_cols[i] = color_coordinate_col;
 
                 // Write new colored pixels back to the frame
-                memcpy(frame_buffer + color_coordinate_row * row_index + color_coordinate_col * 3, color_buffer + i*3, 3);
+                memcpy(frame + color_coordinate_row * width + color_coordinate_col, color_buffer + i, 3);
             }
 
             // Clear them up for next iteration
