@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include "immintrin.h"
 #pragma GCC target ("avx,avx2")
-__attribute__((always_inline))
+#define piece_ratio 15
 
 
 /***********************************************************************************************************************
@@ -46,8 +46,6 @@ void print_team_info(){
  **********************************************************************************************************************/
 void implementation_driver(struct kv *sensor_values, int sensor_values_count, unsigned char *frame_buffer,
                            unsigned int width, unsigned int height, bool grading_mode) {
-    // We do not care about the last <25 ones
-    sensor_values_count = sensor_values_count - (sensor_values_count % 25);
     /*******************************************************************************************************************
      * Store only the colored pixels. Furture actions will only change the states of these pixles.
      *******************************************************************************************************************/
@@ -66,14 +64,34 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     // Store the values to the lists
     int position_frame_buffer;
     int row_index = 3 * width;
-    unsigned char* row_of_blank = (unsigned char*)malloc(row_index);
-    memset(row_of_blank, 255, row_index);
+    int piece_width = width / piece_ratio;
+    int piece_length = piece_width * 3;
+    int offset_rest = 3 * (width % piece_ratio);
+    unsigned char* piece_of_blank = (unsigned char*)malloc(piece_length);
+    memset(piece_of_blank, 255, piece_length);
     // color_count = 0;
     for (register int row = 0; row < width; ++row) {
-        if (memcmp(frame_buffer+i, row_of_blank, row_index) == 0) {
-            i += row_index;
-        } else {
-            for (register int col = 0; col < width; ++col) {
+        register int col = 0;
+        for (register int piece = 0; piece < piece_ratio; ++piece) {
+            if (!memcmp(frame_buffer+i, piece_of_blank, piece_length)) {
+                col += piece_width;
+                i += piece_length;
+            } else {
+                for (register int j = 0; j < piece_length; j += 3) {
+                    if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
+                        // memcpy(color_buffer+color_count*3, frame_buffer+i, 3);
+                        *(int*)(color_buffer+color_count*3) = *((int*)(frame_buffer+i))&0x00ffffff;
+                        color_coordinate_rows[color_count] = row;
+                        color_coordinate_cols[color_count] = col;
+                        ++color_count;
+                    }
+                    i += 3;
+                    ++col;
+                }
+            }
+        }
+        if (memcmp(frame_buffer+i, piece_of_blank, offset_rest)) {
+            for (; col < width; ++col) {
                 if (frame_buffer[i] != 255 || frame_buffer[i+1] != 255 || frame_buffer[i+2] != 255) {
                     // memcpy(color_buffer+color_count*3, frame_buffer+i, 3);
                     *(int*)(color_buffer+color_count*3) = *((int*)(frame_buffer+i))&0x00ffffff;
@@ -83,7 +101,10 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                 }
                 i += 3;
             }
+        } else {
+            i += offset_rest;
         }
+        
     }
 
     /*******************************************************************************************************************
@@ -102,6 +123,10 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     // struct pixel curr_color;
     struct kv sensor_value;
     register int param = width - 1;
+    __m256i params =_mm256_set1_epi32(param);
+    // We do not care about the last <25 ones
+    sensor_values_count = sensor_values_count - (sensor_values_count % 25);
+    register int unroll = color_count - 7;
     for (register int sensorValueIdx = 0; sensorValueIdx < sensor_values_count; ++sensorValueIdx) {
         /* Here we accumulate the actions every 25 frames. Since the order of actions matters,
          * (e.g. A Rotation followed by A Moving Up does not equal to A Moving Up followed by A Rotation.)
@@ -212,8 +237,6 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
             memset(frame_buffer, 255, size);
 
             rotate_cw %= 4;
-            register int unroll = color_count - 7;
-            __m256i params =_mm256_set1_epi32(param);
             for (i = 0; i < unroll; i+=8) {
                 __m256i rows = _mm256_loadu_si256((const __m256i *)(color_coordinate_rows+i));
                 __m256i cols = _mm256_loadu_si256((const __m256i *)(color_coordinate_cols+i));
@@ -303,8 +326,7 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                 color_coordinate_cols[i] = color_coordinate_col;
 
                 // Write new colored pixels back to the frame
-                position_frame_buffer = color_coordinate_row * row_index + color_coordinate_col * 3;
-                memcpy(frame_buffer + position_frame_buffer, color_buffer + i*3, 3);
+                memcpy(frame_buffer + color_coordinate_row * row_index + color_coordinate_col * 3, color_buffer + i*3, 3);
             }
 
             // Clear them up for next iteration
