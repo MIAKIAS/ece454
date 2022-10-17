@@ -115,7 +115,8 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
             
         }
     }
-    
+    // Clean up old colored pixles
+    memset(frame_buffer, 255, size*3);
 
     /*******************************************************************************************************************
      * Summarize the actions performed in 25 frames into one frame
@@ -245,9 +246,6 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
 
         // Perform one action every 25 frame
         if (!((sensorValueIdx+1) % 25)) {
-            // Clean up old colored pixles
-            memset(frame, 255, size*3);
-
             rotate_cw %= 4;
             __m256i move_ups = _mm256_set1_epi32(move_up);
             __m256i move_lefts = _mm256_set1_epi32(move_left);
@@ -288,11 +286,11 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                 }
 
                 // memcpy(color_coordinate+index, &color_coordinate_col_3, 24);
+                _mm256_storeu_si256((__m256i*)buffer_location, _mm256_add_epi32(_mm256_mullo_epi32(rows, widths), cols));
                 _mm256_storeu_si256((__m256i*)(color_coordinate_rows+i), rows);
                 _mm256_storeu_si256((__m256i*)(color_coordinate_cols+i), cols);
 
                 struct frame_color* location = color_buffer + i;
-                _mm256_storeu_si256((__m256i*)buffer_location, _mm256_add_epi32(_mm256_mullo_epi32(rows, widths), cols));
                 memcpy(frame + buffer_location[0], location, 3);
                 memcpy(frame + buffer_location[1], location+1, 3);
                 memcpy(frame + buffer_location[2], location+2, 3);
@@ -352,6 +350,11 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
             mirror_y = 0;
 
             verifyFrame(frame_buffer, width, width, grading_mode);
+            // Clean up old colored pixles
+            if (sensorValueIdx < sensor_values_count - 1) {
+                memset(frame_buffer, 255, size*3);
+            }
+            
         }
     }
     return;
