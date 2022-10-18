@@ -132,10 +132,10 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     char key_1;
     int value;
     // struct pixel curr_color;
-    struct kv sensor_value;
+    register struct kv sensor_value;
     register int param = width - 1;
-    __m256i params =_mm256_set1_epi32(param);
-    __m256i widths = _mm256_set1_epi32(width);
+    register __m256i params =_mm256_set1_epi32(param);
+    register __m256i widths = _mm256_set1_epi32(width);
     int buffer_location[8];
     // We do not care about the last <25 ones
     sensor_values_count = sensor_values_count - (sensor_values_count % 25);
@@ -247,11 +247,11 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
         // Perform one action every 25 frame
         if (!((sensorValueIdx+1) % 25)) {
             rotate_cw %= 4;
-            __m256i move_ups = _mm256_set1_epi32(move_up);
-            __m256i move_lefts = _mm256_set1_epi32(move_left);
+            register __m256i move_ups = _mm256_set1_epi32(move_up);
+            register __m256i move_lefts = _mm256_set1_epi32(move_left);
             for (i = 0; i < unroll; i+=8) {
-                __m256i rows = _mm256_loadu_si256((const __m256i *)(color_coordinate_rows+i));
-                __m256i cols = _mm256_loadu_si256((const __m256i *)(color_coordinate_cols+i));
+                register __m256i rows = _mm256_loadu_si256((const __m256i *)(color_coordinate_rows+i));
+                register __m256i cols = _mm256_loadu_si256((const __m256i *)(color_coordinate_cols+i));
                 
                 if (rotate_cw) {
                     // printf("Rotate CW %d degrees", rotate_cw);
@@ -286,9 +286,9 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                 }
 
                 // memcpy(color_coordinate+index, &color_coordinate_col_3, 24);
-                _mm256_storeu_si256((__m256i*)buffer_location, _mm256_add_epi32(_mm256_mullo_epi32(rows, widths), cols));
                 _mm256_storeu_si256((__m256i*)(color_coordinate_rows+i), rows);
                 _mm256_storeu_si256((__m256i*)(color_coordinate_cols+i), cols);
+                _mm256_storeu_si256((__m256i*)buffer_location, _mm256_add_epi32(_mm256_mullo_epi32(rows, widths), cols));
 
                 struct frame_color* location = color_buffer + i;
                 memcpy(frame + buffer_location[0], location, 3);
