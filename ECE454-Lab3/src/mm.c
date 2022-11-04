@@ -57,10 +57,13 @@ team_t team = {
 #define NEXT_BLKP(bp) ((char *)(bp) + GET_SIZE(((char *)(bp) - WSIZE)))
 #define PREV_BLKP(bp) ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
 
+/* Limit for block round up */
+#define ROUND_UP_LIMIT 8
+
 /**********************************************************
  * The number of classes in the free_list
  * 10 Classes, number are in words
- * 4,5-8,9-16,17-32,33-64,65-128,129-256,257-512,512-1024,1025-inf.
+ * 4,5-8,9-16,17-32,33-64,65-128,129-256,257-512,512-1024...
  **********************************************************/
 #define NUM_CLASS 10
 
@@ -75,7 +78,7 @@ typedef struct free_block {
     struct free_block* pre;  // Predecessor
     struct free_block* succ; // Successor
 } free_block;
-/* A pointer points to the start of the free list*/
+/* A pointer points to the start of the segregated free list*/
 free_block* free_list[NUM_CLASS];
 
 /**********************************************************
@@ -92,6 +95,7 @@ int mm_init(void)
     PUT(heap_listp + (2 * WSIZE), PACK(DSIZE, 1));   // prologue footer
     PUT(heap_listp + (3 * WSIZE), PACK(0, 1));    // epilogue header
     heap_listp += DSIZE;
+    /* Initializze the segregated free list */
     for (int i = 0; i < NUM_CLASS; ++i) {
         free_list[i] = NULL;
     }
@@ -120,6 +124,7 @@ size_t round_up(size_t asize)
 /**********************************************************
 * locate_list
 * Find the class index in free_list
+* Start from 4 words, increment by the power of 2
 **********************************************************/
 int locate_list(size_t size)
 {
@@ -139,6 +144,7 @@ int locate_list(size_t size)
 **********************************************************/
 void add_to_list(free_block* bp)
 {   
+    /* Locate the list */
     int index = locate_list(GET_SIZE(HDRP(bp)));
     /* The list is empty */
     if (free_list[index] == NULL) {
@@ -250,8 +256,7 @@ void *extend_heap(size_t words)
     PUT(FTRP(bp), PACK(size, 0));                // free block footer
     PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1));        // new epilogue header
 
-    /* Coalesce if the previous block was free */
-    return coalesce(bp);
+    return bp;
 }
 
 
@@ -265,34 +270,23 @@ void * find_fit(size_t asize)
 {
     size_t index = locate_list(asize);
     
-    if (free_list[index] != NULL) {
-        /* Search appropriate free list for block */
-        free_block* ans = NULL;
-        size_t diff = SIZE_MAX;
-        for (free_block* bp = free_list[index]; bp != NULL; bp = bp->succ) {
-            if (asize <= GET_SIZE(HDRP(bp)) && GET_SIZE(HDRP(bp)) - asize < diff) {
-                diff = GET_SIZE(HDRP(bp)) - asize;
-                ans = bp;
-            }
-        }
-        if (ans != NULL) {
-            remove_from_list(ans);
-            return ans;
-        }
-    }
-    index += 1;
+    /* Search appropriate free list for block */
     /* If no block is found, try next larger class, repeat until found*/
     while (index < NUM_CLASS) {
         if (free_list[index] != NULL) {
-            free_block* bp = free_list[index];
-            /* There is more than one element in the list */
-            if (bp->succ != NULL) {
-                bp->succ->pre = NULL;
-                free_list[index] = bp->succ;
-            } else {
-                free_list[index] = NULL;
+            free_block* ans = NULL;
+            size_t diff = SIZE_MAX;
+            /* Find the best-fit block */
+            for (free_block* bp = free_list[index]; bp != NULL; bp = bp->succ) {
+                if (asize <= GET_SIZE(HDRP(bp)) && GET_SIZE(HDRP(bp)) - asize < diff) {
+                    diff = GET_SIZE(HDRP(bp)) - asize;
+                    ans = bp;
+                }
             }
-            return bp;
+            if (ans != NULL) {
+                remove_from_list(ans);
+                return ans;
+            }
         }
         index += 1;
     }
@@ -309,7 +303,10 @@ void place(void* bp, size_t asize)
     /* Get the current block size */
     size_t bsize = GET_SIZE(HDRP(bp));
 
-    size_t diff_size = bsize - asize;
+    /* We only care about the case when bsize is larger than asize */
+    /* No need to worry about when diff is negative */
+    size_t diff_size = (bsize > asize) ? bsize - asize : 0;
+    /* Split if the difference is larger than a minimum block size*/
     if (diff_size >= 2 * DSIZE) {
         PUT(HDRP(bp), PACK(asize, 1));
         PUT(FTRP(bp), PACK(asize, 1));
@@ -329,12 +326,13 @@ void place(void* bp, size_t asize)
 void mm_free(void *bp)
 {
     if(bp == NULL){
-      return;
+        return;
     }
 
     size_t size = GET_SIZE(HDRP(bp));
     PUT(HDRP(bp), PACK(size,0));
     PUT(FTRP(bp), PACK(size,0));
+    /* Add to the free list */
     add_to_list(coalesce(bp));
 }
 
@@ -364,7 +362,8 @@ void *mm_malloc(size_t size)
         asize = DSIZE * ((size + (DSIZE) + (DSIZE-1))/ DSIZE);
     }
 
-    if (asize <= (1 << 8)) {
+    /* Round up the block size to the next power of 2 */
+    if (asize <= (1 << ROUND_UP_LIMIT)) {
         asize = round_up(asize);
     }
         
@@ -436,5 +435,5 @@ void *mm_realloc(void *oldptr, size_t size)
  * Return nonzero if the heap is consistant.
  *********************************************************/
 int mm_check(void){
-  return 1;
+    return 1;
 }
