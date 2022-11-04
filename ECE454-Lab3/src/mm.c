@@ -100,6 +100,24 @@ int mm_init(void)
 }
 
 /**********************************************************
+* round_up
+* Round up a request size to 2^n size
+* https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
+**********************************************************/
+size_t round_up(size_t asize)
+{
+    asize--;
+    asize |= asize >> 1;
+    asize |= asize >> 2;
+    asize |= asize >> 4;
+    asize |= asize >> 8;
+    asize |= asize >> 16;
+    asize++;
+
+    return asize;
+}
+
+/**********************************************************
 * locate_list
 * Find the class index in free_list
 **********************************************************/
@@ -340,11 +358,16 @@ void *mm_malloc(size_t size)
         return NULL;
 
     /* Adjust block size to include overhead and alignment reqs. */
-    if (size <= DSIZE)
+    if (size <= DSIZE) {
         asize = 2 * DSIZE;
-    else
+    } else {
         asize = DSIZE * ((size + (DSIZE) + (DSIZE-1))/ DSIZE);
+    }
 
+    if (asize <= (1 << 8)) {
+        asize = round_up(asize);
+    }
+        
     /* Search the free list for a fit */
     if ((bp = find_fit(asize)) != NULL) {
         place(bp, asize);
