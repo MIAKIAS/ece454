@@ -285,8 +285,17 @@ void place(void* bp, size_t asize)
     /* Get the current block size */
     size_t bsize = GET_SIZE(HDRP(bp));
 
-    PUT(HDRP(bp), PACK(bsize, 1));
-    PUT(FTRP(bp), PACK(bsize, 1));
+    size_t diff_size = bsize - asize;
+    if (diff_size >= 2 * DSIZE) {
+        PUT(HDRP(bp), PACK(asize, 1));
+        PUT(FTRP(bp), PACK(asize, 1));
+        PUT(HDRP(NEXT_BLKP(bp)), PACK(diff_size, 0));
+        PUT(FTRP(NEXT_BLKP(bp)), PACK(diff_size, 0));
+        add_to_list((free_block*)NEXT_BLKP(bp));
+    } else {
+        PUT(HDRP(bp), PACK(bsize, 1));
+        PUT(FTRP(bp), PACK(bsize, 1));
+    }
 }
 
 /**********************************************************
