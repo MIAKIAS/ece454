@@ -358,32 +358,55 @@ void *mm_malloc(size_t size)
  * mm_realloc
  * Implemented simply in terms of mm_malloc and mm_free
  *********************************************************/
-void *mm_realloc(void *ptr, size_t size)
+void *mm_realloc(void *oldptr, size_t size)
 {
     /* If size == 0 then this is just free, and we return NULL. */
     if(size == 0){
-      mm_free(ptr);
+      mm_free(oldptr);
       return NULL;
     }
     /* If oldptr is NULL, then this is just malloc. */
-    if (ptr == NULL)
+    if (oldptr == NULL)
       return (mm_malloc(size));
 
-    void *oldptr = ptr;
     void *newptr;
-    size_t copySize;
+    size_t copySize = GET_SIZE(HDRP(oldptr));
 
-    newptr = mm_malloc(size);
-    if (newptr == NULL)
-      return NULL;
+    /* Adjust block size to include overhead and alignment reqs. */
+    size_t asize;
+    if (size <= DSIZE)
+        asize = 2 * DSIZE;
+    else
+        asize = DSIZE * ((size + (DSIZE) + (DSIZE-1))/ DSIZE);
 
-    /* Copy the old data. */
-    copySize = GET_SIZE(HDRP(oldptr));
-    if (size < copySize)
-      copySize = size;
-    memcpy(newptr, oldptr, copySize);
-    mm_free(oldptr);
-    return newptr;
+    /* If enlarging the block */
+    if (asize > copySize) {
+        /* First try to coalesce */
+        void* temp_ptr = coalesce(oldptr);
+        if (GET_SIZE(HDRP(temp_ptr)) >= asize) {
+            memmove(temp_ptr, oldptr, copySize - DSIZE);
+            place(temp_ptr, GET_SIZE(HDRP(temp_ptr)));
+            return temp_ptr;
+        }
+        /* If cannot, have to malloc new space*/
+        newptr = mm_malloc(size);
+        if (newptr == NULL)
+            return NULL;
+        memcpy(newptr, oldptr, copySize - DSIZE);
+        add_to_list((free_block*)oldptr);
+        return newptr;
+    /* If shrinking the block */
+    } else {
+        size_t diff_size = copySize - asize;
+        if (diff_size >= 2 * DSIZE) {
+            PUT(HDRP(oldptr), PACK(asize, 1));
+            PUT(FTRP(oldptr), PACK(asize, 1));
+            PUT(HDRP(NEXT_BLKP(oldptr)), PACK(diff_size, 0));
+            PUT(FTRP(NEXT_BLKP(oldptr)), PACK(diff_size, 0));
+            add_to_list((free_block*)NEXT_BLKP(oldptr));
+        }
+        return oldptr;
+    }
 }
 
 /**********************************************************
