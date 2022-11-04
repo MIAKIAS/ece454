@@ -397,14 +397,6 @@ void *mm_realloc(void *oldptr, size_t size)
         return newptr;
     /* If shrinking the block */
     } else {
-        size_t diff_size = copySize - asize;
-        if (diff_size >= 2 * DSIZE) {
-            PUT(HDRP(oldptr), PACK(asize, 1));
-            PUT(FTRP(oldptr), PACK(asize, 1));
-            PUT(HDRP(NEXT_BLKP(oldptr)), PACK(diff_size, 0));
-            PUT(FTRP(NEXT_BLKP(oldptr)), PACK(diff_size, 0));
-            add_to_list((free_block*)NEXT_BLKP(oldptr));
-        }
         return oldptr;
     }
 }
