@@ -60,6 +60,18 @@ team_t team = {
 void* heap_listp = NULL;
 
 /**********************************************************
+ * free_block
+ * Define the wrapper for a free block payload -> An element in a linked-list
+ * Including the predecessor and successor
+ **********************************************************/
+typedef struct free_block {
+    struct free_block* pre;  // Predecessor
+    struct free_block* succ; // Successor
+} free_block;
+/* A pointer points to the start of the free list*/
+free_block* free_list = NULL;
+
+/**********************************************************
  * mm_init
  * Initialize the heap, including "allocation" of the
  * prologue and epilogue
@@ -73,9 +85,59 @@ void* heap_listp = NULL;
      PUT(heap_listp + (2 * WSIZE), PACK(DSIZE, 1));   // prologue footer
      PUT(heap_listp + (3 * WSIZE), PACK(0, 1));    // epilogue header
      heap_listp += DSIZE;
+     free_list = NULL;
 
      return 0;
  }
+
+/**********************************************************
+* add_to_list
+* Add the free_block to the front of free_list
+**********************************************************/
+void add_to_list(free_block* bp)
+{
+    /* The free_list is empty */
+    if (free_list == NULL) {
+        free_list = bp;
+        bp->pre = NULL;
+        bp->succ = NULL;
+    } else {
+        free_list->pre = bp;
+        bp->pre = NULL;
+        bp->succ = free_list;
+        free_list = bp;
+    }
+
+    return;
+}
+
+/**********************************************************
+* remove_from_list
+* Remove the free_block from the free_list
+**********************************************************/
+void remove_from_list(free_block* bp) {
+    /* The block is at the front of the list */
+    if (bp->pre == NULL) {
+        /* There is more than one element in the list */
+        if (bp->succ != NULL) {
+            bp->succ->pre = NULL;
+            free_list = bp->succ;
+            return;
+        } else {
+            free_list = NULL;
+            return;
+        }
+    /* The block is at the end of the list */
+    } else if (bp->succ == NULL) {
+        bp->pre->succ = NULL;
+        return;
+    /* The block is at the middle of the list */
+    } else {
+        bp->pre->succ = bp->succ;
+        bp->succ->pre = bp->pre;
+        return;
+    }
+}
 
 /**********************************************************
  * coalesce
@@ -96,6 +158,7 @@ void *coalesce(void *bp)
     }
 
     else if (prev_alloc && !next_alloc) { /* Case 2 */
+        remove_from_list((free_block *)NEXT_BLKP(bp));
         size += GET_SIZE(HDRP(NEXT_BLKP(bp)));
         PUT(HDRP(bp), PACK(size, 0));
         PUT(FTRP(bp), PACK(size, 0));
@@ -103,6 +166,7 @@ void *coalesce(void *bp)
     }
 
     else if (!prev_alloc && next_alloc) { /* Case 3 */
+        remove_from_list((free_block *)PREV_BLKP(bp));
         size += GET_SIZE(HDRP(PREV_BLKP(bp)));
         PUT(FTRP(bp), PACK(size, 0));
         PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
@@ -110,12 +174,15 @@ void *coalesce(void *bp)
     }
 
     else {            /* Case 4 */
+        remove_from_list((free_block *)PREV_BLKP(bp));
+        remove_from_list((free_block *)NEXT_BLKP(bp));
         size += GET_SIZE(HDRP(PREV_BLKP(bp)))  +
             GET_SIZE(FTRP(NEXT_BLKP(bp)))  ;
         PUT(HDRP(PREV_BLKP(bp)), PACK(size,0));
         PUT(FTRP(NEXT_BLKP(bp)), PACK(size,0));
         return (PREV_BLKP(bp));
     }
+    return bp;
 }
 
 /**********************************************************
@@ -152,11 +219,9 @@ void *extend_heap(size_t words)
  **********************************************************/
 void * find_fit(size_t asize)
 {
-    void *bp;
-    for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp))
-    {
-        if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp))))
-        {
+    for (free_block* bp = free_list; bp != NULL; bp = bp->succ) {
+        if (asize <= GET_SIZE(HDRP(bp))) {
+            remove_from_list(bp);
             return bp;
         }
     }
@@ -185,10 +250,11 @@ void mm_free(void *bp)
     if(bp == NULL){
       return;
     }
+
     size_t size = GET_SIZE(HDRP(bp));
     PUT(HDRP(bp), PACK(size,0));
     PUT(FTRP(bp), PACK(size,0));
-    coalesce(bp);
+    add_to_list(coalesce(bp));
 }
 
 
