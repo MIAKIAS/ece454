@@ -393,7 +393,7 @@ void *mm_realloc(void *oldptr, size_t size)
         if (newptr == NULL)
             return NULL;
         memcpy(newptr, oldptr, copySize - DSIZE);
-        add_to_list((free_block*)oldptr);
+        add_to_list((free_block*)temp_ptr);
         return newptr;
     /* If shrinking the block */
     } else {
