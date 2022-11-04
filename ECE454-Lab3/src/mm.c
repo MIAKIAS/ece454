@@ -249,11 +249,17 @@ void * find_fit(size_t asize)
     
     if (free_list[index] != NULL) {
         /* Search appropriate free list for block */
+        free_block* ans = NULL;
+        size_t diff = SIZE_MAX;
         for (free_block* bp = free_list[index]; bp != NULL; bp = bp->succ) {
-            if (asize <= GET_SIZE(HDRP(bp))) {
-                remove_from_list(bp);
-                return bp;
+            if (asize <= GET_SIZE(HDRP(bp)) && GET_SIZE(HDRP(bp)) - asize < diff) {
+                diff = GET_SIZE(HDRP(bp)) - asize;
+                ans = bp;
             }
+        }
+        if (ans != NULL) {
+            remove_from_list(ans);
+            return ans;
         }
     }
     index += 1;
