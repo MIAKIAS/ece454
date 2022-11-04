@@ -57,6 +57,13 @@ team_t team = {
 #define NEXT_BLKP(bp) ((char *)(bp) + GET_SIZE(((char *)(bp) - WSIZE)))
 #define PREV_BLKP(bp) ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
 
+/**********************************************************
+ * The number of classes in the free_list
+ * 10 Classes, number are in words
+ * 4,5-8,9-16,17-32,33-64,65-128,129-256,257-512,512-1024,1025-inf.
+ **********************************************************/
+#define NUM_CLASS 10
+
 void* heap_listp = NULL;
 
 /**********************************************************
@@ -69,43 +76,62 @@ typedef struct free_block {
     struct free_block* succ; // Successor
 } free_block;
 /* A pointer points to the start of the free list*/
-free_block* free_list = NULL;
+free_block* free_list[NUM_CLASS];
 
 /**********************************************************
  * mm_init
  * Initialize the heap, including "allocation" of the
  * prologue and epilogue
  **********************************************************/
- int mm_init(void)
- {
-   if ((heap_listp = mem_sbrk(4*WSIZE)) == (void *)-1)
-         return -1;
-     PUT(heap_listp, 0);                         // alignment padding
-     PUT(heap_listp + (1 * WSIZE), PACK(DSIZE, 1));   // prologue header
-     PUT(heap_listp + (2 * WSIZE), PACK(DSIZE, 1));   // prologue footer
-     PUT(heap_listp + (3 * WSIZE), PACK(0, 1));    // epilogue header
-     heap_listp += DSIZE;
-     free_list = NULL;
+int mm_init(void)
+{
+    if ((heap_listp = mem_sbrk(4*WSIZE)) == (void *)-1)
+            return -1;
+    PUT(heap_listp, 0);                         // alignment padding
+    PUT(heap_listp + (1 * WSIZE), PACK(DSIZE, 1));   // prologue header
+    PUT(heap_listp + (2 * WSIZE), PACK(DSIZE, 1));   // prologue footer
+    PUT(heap_listp + (3 * WSIZE), PACK(0, 1));    // epilogue header
+    heap_listp += DSIZE;
+    for (int i = 0; i < NUM_CLASS; ++i) {
+        free_list[i] = NULL;
+    }
 
-     return 0;
- }
+    return 0;
+}
+
+/**********************************************************
+* locate_list
+* Find the class index in free_list
+**********************************************************/
+int locate_list(size_t size)
+{
+    size = (size >> 3) - 1;
+    int count = 0;
+    while (size != 0) {
+        size = size >> 1;
+        ++count;
+    }
+    count -= 2;
+    return count >= NUM_CLASS ? NUM_CLASS - 1 : count;
+}
 
 /**********************************************************
 * add_to_list
 * Add the free_block to the front of free_list
 **********************************************************/
 void add_to_list(free_block* bp)
-{
-    /* The free_list is empty */
-    if (free_list == NULL) {
-        free_list = bp;
+{   
+    int index = locate_list(GET_SIZE(HDRP(bp)));
+    /* The list is empty */
+    if (free_list[index] == NULL) {
+        free_list[index] = bp;
         bp->pre = NULL;
         bp->succ = NULL;
     } else {
-        free_list->pre = bp;
+        free_list[index]->pre = bp;
         bp->pre = NULL;
-        bp->succ = free_list;
-        free_list = bp;
+        bp->succ = free_list[index];
+        free_list[index] = bp;
     }
 
     return;
@@ -118,20 +144,21 @@ void add_to_list(free_block* bp)
 void remove_from_list(free_block* bp) {
     /* The block is at the front of the list */
     if (bp->pre == NULL) {
+        int index = locate_list(GET_SIZE(HDRP(bp)));
         /* There is more than one element in the list */
         if (bp->succ != NULL) {
             bp->succ->pre = NULL;
-            free_list = bp->succ;
+            free_list[index] = bp->succ;
             return;
         } else {
-            free_list = NULL;
+            free_list[index] = NULL;
             return;
         }
     /* The block is at the end of the list */
     } else if (bp->succ == NULL) {
         bp->pre->succ = NULL;
         return;
-    /* The block is at the middle of the list */
+    /* The block is in the middle of the list */
     } else {
         bp->pre->succ = bp->succ;
         bp->succ->pre = bp->pre;
@@ -182,7 +209,6 @@ void *coalesce(void *bp)
         PUT(FTRP(NEXT_BLKP(bp)), PACK(size,0));
         return (PREV_BLKP(bp));
     }
-    return bp;
 }
 
 /**********************************************************
@@ -219,12 +245,34 @@ void *extend_heap(size_t words)
  **********************************************************/
 void * find_fit(size_t asize)
 {
-    for (free_block* bp = free_list; bp != NULL; bp = bp->succ) {
-        if (asize <= GET_SIZE(HDRP(bp))) {
-            remove_from_list(bp);
-            return bp;
+    size_t index = locate_list(asize);
+    
+    if (free_list[index] != NULL) {
+        /* Search appropriate free list for block */
+        for (free_block* bp = free_list[index]; bp != NULL; bp = bp->succ) {
+            if (asize <= GET_SIZE(HDRP(bp))) {
+                remove_from_list(bp);
+                return bp;
+            }
         }
     }
+    index += 1;
+    /* If no block is found, try next larger class, repeat until found*/
+    while (index < NUM_CLASS) {
+        if (free_list[index] != NULL) {
+            free_block* bp = free_list[index];
+            /* There is more than one element in the list */
+            if (bp->succ != NULL) {
+                bp->succ->pre = NULL;
+                free_list[index] = bp->succ;
+            } else {
+                free_list[index] = NULL;
+            }
+            return bp;
+        }
+        index += 1;
+    }
+    /* If still not found, grow heap */
     return NULL;
 }
 
@@ -234,11 +282,11 @@ void * find_fit(size_t asize)
  **********************************************************/
 void place(void* bp, size_t asize)
 {
-  /* Get the current block size */
-  size_t bsize = GET_SIZE(HDRP(bp));
+    /* Get the current block size */
+    size_t bsize = GET_SIZE(HDRP(bp));
 
-  PUT(HDRP(bp), PACK(bsize, 1));
-  PUT(FTRP(bp), PACK(bsize, 1));
+    PUT(HDRP(bp), PACK(bsize, 1));
+    PUT(FTRP(bp), PACK(bsize, 1));
 }
 
 /**********************************************************
