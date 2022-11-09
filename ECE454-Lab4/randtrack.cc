@@ -14,11 +14,11 @@
  * Please fill in the following team struct 
  */
 team_t team = {
-    "Team Name",                  /* Team name */
+    "杨波修脚",                  /* Team name */
 
-    "AAA BBB",                    /* Member full name */
-    "9999999999",                 /* Member student number */
-    "AAABBB@CCC",                 /* Member email address */
+    "Weizhou Wang",                    /* Member full name */
+    "1004421262",                 /* Member student number */
+    "weizhou.wang@mail.utoronto.ca",                 /* Member email address */
 };
 
 unsigned num_threads;
