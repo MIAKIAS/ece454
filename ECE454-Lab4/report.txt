@@ -1,0 +1,29 @@
+1. Why is it important to #ifdef out methods and datastructures that aren’t used for different versions of randtrack? 
+
+Those methods and datastructures will increase the size of the compiled object file, which results in a worse locality
+of the instructions, and as a result, the program will run slower than expected and will give inaccurate results when
+performing measurment. FIXME
+
+2. Can you implement this without modifying the hash class, or without knowing its internal implementation?
+
+We can implement this without modifying the hash class, but we have to know its internal implementation. We can create
+an array of locks, where each lock is responsible for an element in the "entries" array, i.e. each lock corresponds to 
+a list. The lock can be used in the randtrack file only when the hashtable accessing its elements. However, to do so, we 
+need to know how the hash class is implemented, especially how the hash index in computed (i.e. the impementation of 
+HASH_INDEX macro).
+
+3. Can you properly implement this solely by modifying the hash class methods lookup and insert? Explain. 
+
+No, because the hash table is also modified outside the hash class, i.e. "s->count++" in randtrack, because the increment 
+operation is not atomic, so we have to add a lock around this modification as well to avoid the race condition.
+
+4. Can you implement this by adding to the hash class a new function lookup and insert if absent? Explain. 
+
+Yes we can, because this prevents the situation where multiple threads inserting the same element. However, other than the new
+function needs to be in a critical section, the "s->count++" in randtrack sill need to be protected, as discussed in the previous
+question.
+
+5. Can you implement it by adding new methods to the hash class lock list and unlock list? Explain. 
+
+Yes we can. By doing so we have a separate lock for each list, then we can use them in the randtrack file to ensure correct
+behaviour. Other than that, we also need to initialize and free the locks in member function setup() and cleanup().
