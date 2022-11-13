@@ -1,19 +1,57 @@
 #!/bin/bash
 
+# for value in  0 50 100 200 300 400 500
+# do
+#     echo generating rt1_$value.out...
+#     ./randtrack 1 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcases_reference/rt1_$value.out 
+#     echo generating rt2_$value.out...
+#     ./randtrack 2 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcases_reference/rt2_$value.out 
+#     echo generating rt4_$value.out...
+#     ./randtrack 4 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcases_reference/rt4_$value.out 
+# done
+# for value in  0 50 100 200 300 400 500
+# do
+#     echo generating rt1_$value.out...
+#     ./randtrack_parallel 1 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcases_parallel/rt1_$value.out 
+#     echo generating rt2_$value.out...
+#     ./randtrack_parallel 2 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcases_parallel/rt2_$value.out 
+#     echo generating rt4_$value.out...
+#     ./randtrack_parallel 4 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcases_parallel/rt4_$value.out 
+# done
+# for value in  0 50 100 200 300 400 500
+# do
+#     echo generating rt1_$value.out...
+#     ./randtrack_global_lock 1 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcases_global/rt1_$value.out 
+#     echo generating rt2_$value.out...
+#     ./randtrack_global_lock 2 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcases_global/rt2_$value.out 
+#     echo generating rt4_$value.out...
+#     ./randtrack_global_lock 4 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcases_global/rt4_$value.out 
+# done
+# for value in  0 50 100 200 300 400 500
+# do
+#     echo generating rt1_$value.out...
+#     ./randtrack_list_lock 1 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcases_list_lock/rt1_$value.out 
+#     echo generating rt2_$value.out...
+#     ./randtrack_list_lock 2 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcases_list_lock/rt2_$value.out 
+#     echo generating rt4_$value.out...
+#     ./randtrack_list_lock 4 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcases_list_lock/rt4_$value.out 
+# done
+# for value in  0 50 100 200 300 400 500
+# do
+#     echo generating rt1_$value.out...
+#     ./randtrack_element_lock 1 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcase_element_lock/rt1_$value.out 
+#     echo generating rt2_$value.out...
+#     ./randtrack_element_lock 2 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcase_element_lock/rt2_$value.out 
+#     echo generating rt4_$value.out...
+#     ./randtrack_element_lock 4 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcase_element_lock/rt4_$value.out 
+# done
+
 for value in  0 50 100 200 300 400 500
 do
     echo generating rt1_$value.out...
-    ./randtrack_reduction 1 $value > rt1_$value.out && sort -n rt1_$value.out > rt1_$value.outs && rm rt1_$value.out && mv rt1_$value.outs testcases_reduction/rt1_$value.out 
-done
-
-for value in  0 50 100 200 300 400 500
-do
+    ./randtrack_reduction 1 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcases_reduction/rt1_$value.out 
     echo generating rt2_$value.out...
-    ./randtrack_reduction 2 $value > rt1_$value.out && sort -n rt1_$value.out > rt1_$value.outs && rm rt1_$value.out && mv rt1_$value.outs testcases_reduction/rt2_$value.out 
-done
-
-for value in  0 50 100 200 300 400 500
-do
+    ./randtrack_reduction 2 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcases_reduction/rt2_$value.out 
     echo generating rt4_$value.out...
-    ./randtrack_reduction 4 $value > rt1_$value.out && sort -n rt1_$value.out > rt1_$value.outs && rm rt1_$value.out && mv rt1_$value.outs testcases_reduction/rt4_$value.out 
+    ./randtrack_reduction 4 $value > rt_$value.out && sort -n rt_$value.out > rt_$value.outs && rm rt_$value.out && mv rt_$value.outs testcases_reduction/rt4_$value.out 
 done

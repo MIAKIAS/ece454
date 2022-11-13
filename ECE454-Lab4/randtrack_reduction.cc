@@ -183,6 +183,10 @@ main (int argc, char* argv[]){
   }
 
   delete []params;
+  for (int i = 0; i < num_threads; ++i) {
+    thread_hashes[i].cleanup();
+  }
+  delete []thread_hashes;
 
   // print a list of the frequency of all samples
   h.print();
