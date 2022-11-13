@@ -22,4 +22,4 @@ randtrack_reduction: list.h hash.h defs.h randtrack_reduction.cc
 	$(CC) $(CFLAGS) randtrack_reduction.cc -o randtrack_reduction -lpthread
 
 clean:
-	rm -f *.o randtrack randtrack_global_lock randtrack_tm randtrack_list_lock randtrack_parallel
+	rm -f *.o randtrack randtrack_global_lock randtrack_list_lock randtrack_parallel randtrack_element_lock randtrack_reduction
