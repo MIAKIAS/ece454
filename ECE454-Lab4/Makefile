@@ -18,7 +18,7 @@ randtrack_list_lock: list.h hash_list_lock.h defs.h randtrack_list_lock.cc
 randtrack_element_lock: list.h hash.h defs.h randtrack_element_lock.cc
 	$(CC) $(CFLAGS) randtrack_element_lock.cc -o randtrack_element_lock
 
-randtrack_reduction: list.h hash.h defs.h randtrack_reduction.cc
+randtrack_reduction: list.h hash_reduction.h defs.h randtrack_reduction.cc
 	$(CC) $(CFLAGS) randtrack_reduction.cc -o randtrack_reduction
 
 clean:

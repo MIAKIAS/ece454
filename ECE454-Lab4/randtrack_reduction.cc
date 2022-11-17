@@ -165,7 +165,10 @@ main (int argc, char* argv[]){
 
   // Wait for all threads to complete
   for (int i = 0; i < num_threads; ++i) {
-    pthread_join(thread[i], NULL);
+    if (pthread_join(thread[i], NULL) != 0) {
+      printf("Error pthread_join()...\n");
+      exit(1);
+    }
   }
 
   // Merge the thread hash tables
