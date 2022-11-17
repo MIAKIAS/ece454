@@ -167,7 +167,7 @@ main (int argc, char* argv[]){
   }
 
   delete []params;
-  pthread_mutex_destroy(&mutex);
+  delete []thread;
   // print a list of the frequency of all samples
   h.print();
 }

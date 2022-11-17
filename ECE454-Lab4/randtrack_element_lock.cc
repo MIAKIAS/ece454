@@ -4,7 +4,7 @@
 #include <pthread.h>
 
 #include "defs.h"
-#include "hash.h"
+#include "hash_list_lock.h"
 
 #define SAMPLES_TO_COLLECT   10000000
 #define RAND_NUM_UPPER_BOUND   100000
@@ -32,8 +32,16 @@ class sample {
  public:
   sample *next;
   unsigned count;
+  pthread_mutex_t lock;
 
-  sample(unsigned the_key){my_key = the_key; count = 0;};
+  sample(unsigned the_key) {
+    my_key = the_key; 
+    count = 0;
+    if (pthread_mutex_init(&lock, NULL) != 0) {
+      printf("Mutex initialization failed...\n");
+      exit(1);
+    }
+  };
   unsigned key(){return my_key;}
   void print(FILE *f){printf("%d %d\n",my_key,count);}
 };
@@ -43,9 +51,6 @@ class sample {
 // the element and key value here: element is "class sample" and
 // key value is "unsigned".  
 hash<sample,unsigned> h;
-
-// Mutex lock
-pthread_mutex_t mutex[RAND_NUM_UPPER_BOUND];
 
 /* Thread routine parameter */
 typedef struct seed_stream {
@@ -74,17 +79,19 @@ void* process_stream(void* param) {
       // force the sample to be within the range of 0..RAND_NUM_UPPER_BOUND-1
       key = rnum % RAND_NUM_UPPER_BOUND;
       // if this sample has not been counted before
-      pthread_mutex_lock(&mutex[key]);
+      h.lock_list(key);
       if (!(s = h.lookup(key))) {
         // insert a new element for it into the hash table
         s = new sample(key);
         h.insert(s);
       }
+      h.unlock_list(key);
 
       // increment the count for the sample
+      pthread_mutex_lock(&(s->lock));
       s->count++;
-
-      pthread_mutex_unlock(&mutex[key]);
+      pthread_mutex_unlock(&(s->lock));
+      
     }
   }
   return NULL;
@@ -119,14 +126,6 @@ main (int argc, char* argv[]){
   // Initialize threads
   pthread_t* thread = new pthread_t[num_threads];
 
-  // Initialize locks
-  for (int i = 0; i < RAND_NUM_UPPER_BOUND; ++i) {
-    if (pthread_mutex_init(&mutex[i], NULL) != 0) {
-      printf("Mutex initialization failed...\n");
-      exit(1);
-    }
-  }
-  
   seed_stream* params = NULL;
   switch (num_threads)
   {
@@ -169,10 +168,7 @@ main (int argc, char* argv[]){
   }
 
   delete []params;
-
-  for (int i = 0; i < RAND_NUM_UPPER_BOUND; ++i) {
-    pthread_mutex_destroy(&mutex[i]);
-  }
+  delete []thread;
   // print a list of the frequency of all samples
   h.print();
 }

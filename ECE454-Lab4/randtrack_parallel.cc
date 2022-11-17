@@ -155,6 +155,7 @@ main (int argc, char* argv[]){
   }
 
   delete []params;
+  delete []thread;
   // print a list of the frequency of all samples
   h.print();
 }
