@@ -4,7 +4,7 @@
 #include <pthread.h>
 
 #include "defs.h"
-#include "hash.h"
+#include "hash_reduction.h"
 
 #define SAMPLES_TO_COLLECT   10000000
 #define RAND_NUM_UPPER_BOUND   100000
@@ -168,18 +168,9 @@ main (int argc, char* argv[]){
     pthread_join(thread[i], NULL);
   }
 
+  // Merge the thread hash tables
   for (int i = 0; i < num_threads; ++i) {
-    for (int j = 0; j < RAND_NUM_UPPER_BOUND; ++j) {
-      sample *s;
-      if ((s = thread_hashes[i].lookup(j))) {
-        sample *global_s;
-        if (!(global_s = h.lookup(j))) {
-          global_s = new sample(j);
-          h.insert(global_s);
-        }
-        global_s->count += s->count;
-      }
-    }
+    h.merge(&thread_hashes[i]);
   }
 
   delete []params;

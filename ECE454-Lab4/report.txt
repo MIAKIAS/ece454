@@ -1,120 +1,136 @@
 1. Why is it important to #ifdef out methods and datastructures that aren’t used for different versions of randtrack? 
 
-Those methods and datastructures will increase the size of the compiled object file, which results in a worse locality
-of the instructions, and as a result, the program will run slower than expected and will give inaccurate results when
-performing measurment. FIXME
+With #ifdef, the code that does not belong to the current version will be ignored and not be compiled. If we do not use 
+#ifdef, those methods and data structures for other versions will increase the size of the compiled object files, which 
+results in a worse locality (and the initialization and clean-up of extra data structures will also slow down the program), 
+so the program will run slower than expected and the performance will be affected. In addition, without #ifdef, it might 
+be harder for the developers to read or debug the code because they need extra time to distinguish which version the data 
+structures or methods belong to. As a result, it is easier to have bugs or conflicts because the developer may mistakenly 
+use the methods in the wrong version (or mistakenly run redundant code from two versions together).
 
 2. Can you implement this without modifying the hash class, or without knowing its internal implementation?
 
-We can implement this without modifying the hash class, but we have to know its internal implementation. We can create
-an array of locks, where each lock is responsible for an element in the "entries" array, i.e. each lock corresponds to 
-a list. The lock can be added in the randtrack file only, when the hashtable accessing its elements. However, to do so, we 
-need to know how the hash class is implemented, especially how the hash index in computed (i.e. the impementation of 
-HASH_INDEX macro).
+We can implement this without modifying the hash class, but we have to know its internal implementation. We can create an 
+array of locks, where each lock is responsible for an element in the "entries" array, i.e. each lock corresponds to a list 
+(and the total number of lists has been given in the randtrack file). The lock can be added in the randtrack file, and be 
+applied when the hashtable accesses its lists or list elements. However, to do so, we need to know how the hash class is 
+implemented, especially how the hash index is computed (i.e. the implementation of HASH_INDEX macro), so that we know which 
+keys belong to the same list. (Assume this index computation counts as the "internal implementation").
 
 3. Can you properly implement this solely by modifying the hash class methods lookup and insert? Explain. 
 
-No, because the hash table is also modified outside the hash class, i.e. "s->count++" in randtrack, because the increment 
-operation is not atomic, so we have to put this modification into the critical section as well to avoid the race condition.
+No. First, the hash table is also modified outside the hash class methods, i.e. "s->count++" in randtrack, because the increment 
+operation is not atomic, so we have to put this modification into the critical section as well to avoid the race condition. 
+Second, it is possible that there is an element inserted in between the lookup() and insert(), so we need to put them in 
+one critical section, otherwise, there might be two same elements inserted redundantly. 
 
 4. Can you implement this by adding to the hash class a new function lookup and insert if absent? Explain. 
 
-Yes we can, because this prevents the situation where multiple threads inserting the same element. However, other than the new
-function needed to be in a critical section, the "s->count++" in randtrack sill need to be protected, as discussed in the previous
-question.
+Yes, we can, because this prevents the situation where multiple threads insert the same element. However, other than the new 
+function needed to be in a critical section, the "s->count++" in randtrack still need to be protected, as discussed in the 
+previous question (but we can move this inside the lookup_and_insert()).
 
 5. Can you implement it by adding new methods to the hash class lock list and unlock list? Explain. 
 
-Yes we can. By doing so we have a separate lock for each list, then we can use them in the randtrack file to ensure correct
-behaviour. Other than that, we also need to initialize and free the locks in member function setup() and cleanup().
+Yes, we can. We will have an array of locks in the hash class, where each one corresponds to a hash table entry list. The input 
+to lock_list() and unlock_list() will be the key value, and the methods will compute the corresponding hash index to locate the 
+corresponding lock. By doing so we have a separate lock for each list, then we can use them in the randtrack file to ensure correct 
+behaviour when the hash table is being accessed or modified (e.g. lock before lookup(), unlock after increment). Other than that, 
+we also need to initialize and free the locks in the methods setup() and cleanup().
 
-6. Ignored
+6. TM. Ignored
 
 7. What are the pros and cons of this approach?
 Pros:
-a. It helps to improve the performance when different threads working concurrently/in parallel because they do not need to worry about 
-waiting for a lock on the critical section, so there will be no locking and unlocking overhead anymore.
-b. It is easier to implement than using locks because developers do not need to worry about identifying critical sections or ensuring 
-synchronization on critical sections. It is less likely to have data race than before.
-c. As there is no critical section anymore, the program allows better scalability.
+    a. We do not need mutex locks anymore. It helps to improve the performance when different threads work concurrently/in parallel 
+       because they do not need to worry about waiting for a lock on the critical section, so there will be no locking overhead anymore.
+    b. It is easier to implement than using locks because developers do not need to worry about identifying critical sections or ensuring 
+       synchronizations on shared data structures when the threads are working together (we do need to merge the hash tables after all 
+       threads finish though). It prevents to have race conditions because each thread has a separate hash table.
+    c. It provided more scalability when there is an increasing number of random numbers because there is no lock contention anymore 
+       (while the merging step may weaken the scalability).
 Cons:
-a. Since each thread has a separate hash table, there will be much more memory used than before, adding a lot of memory overhead.
-b. All hash tables need to be initialized in the begining (and cleaned up in the end), and be synchronized after threads finish their jobs, 
-which adds performance overhead to the program.
-c. Although threads may access hash tables with the same index or even elements with the same key values, as threads use different hash tables, 
-the entries and elements will be stored in different cache lines, which reduces locality, and so the performance may drop down.
+    a. Since each thread has a separate hash table, there will be more memory used than before, adding a lot of memory overhead.
+    b. All hash tables need to be initialized in the beginning (and cleaned up in the end), and be merged after threads finish their jobs, 
+       which adds performance overhead to the program.
+    c. Although threads may access hash tables with the same index or even elements with the same key values, as threads use different hash 
+       tables, the entries and elements will be stored in different cache lines, which reduces locality, and so the performance may be affected.
 
-Measurement (in sec) with samples_to_skip set to 50
-Original Randtrack: 6.702
-Global-lock:
-    1 Thread:       6.950
-    2 Threads:      4.218
-    4 Threads:      4.766
-List-lock:
-    1 Thread:       7.106
-    2 Threads:      3.782
-    4 Threads:      2.002
-Element-lock:
-    1 Thread:       7.018
-    2 Threads:      3.760
-    4 Threads:      2.000
-Reduction Version:
-    1 Thread:       6.708
-    2 Threads:      3.394
-    4 Threads:      1.700
+
++-----------------------------------------------------+
+| Measurement (in sec) with samples_to_skip set to 50 |
++---------------+-----------+------------+------------+
+| Version       |  1 Thread |  2 Threads |  4 Threads |
++---------------+-----------+------------+------------+
+| Original      |                6.712                |
++---------------+-----------+------------+------------+
+| Global-lock   |   6.788   |    4.174   |    4.670   |
++---------------+-----------+------------+------------+
+| List-lock     |   7.106   |    3.782   |    2.004   |
++---------------+-----------+------------+------------+
+| Element-lock  |   7.330   |    3.944   |    2.088   |
++---------------+-----------+------------+------------+
+| Reduction     |   6.702   |    3.418   |    1.706   |
++---------------+-----------+------------+------------+
 
 8. For samples to skip set to 50, what is the overhead for each parallelization approach? Report this as the runtime of the parallel version with one 
    thread divided by the runtime of the single-threaded version. 
 
-Overhead:
-Global-lock:        6.950/6.702 = 1.037
-List-lock:          7.106/6.702 = 1.060
-Element-lock:       7.018/6.702 = 1.047
-Reduction Version:  6.708/6.702 = 1.001
++-------------------+---------------------+
+| Version           | Overhead            |
++-------------------+---------------------+
+| Global-lock       | 6.788/6.712 = 1.011 |
++-------------------+---------------------+
+| List-lock         | 7.106/6.712 = 1.059 |
++-------------------+---------------------+
+| Element-lock      | 7.330/6.712 = 1.092 |
++-------------------+---------------------+
+| Reduction Version | 6.702/6.712 = 0.999 |
++-------------------+---------------------+
 
 9. How does each approach perform as the number of threads increases? If performance gets worse for a certain case, explain why that may have happened. 
 
-Except for Global-lock, all other parallelization approaches perform better as the number of threads increases because there are more threads 
-working in parallel. However, for the Global-lock, although using 2 threads results in a better performance than 1 thread, increasing threads 
-further more to 4 would not improve the performance anymore, instead there came some extra overhead to make the elapsed time longer. The reason 
-is because this approach uses a coarse-grained global lock, so the lock gets contended evertime when there are more threads accessing the hash table at 
-the same time. The elapsed time when using 2 threads is less than when using 1 thread is because the time spent by skipping samples got parallelized. However, 
-when accessing the hash table, the threads were actually always waiting for each other and so the hash table modification would not be accelerated by the parallelization 
-and became the bottleneck. Furthermore, when adding more threads, it brought in more overhead such as thread context switching or cache misses, which consumed 
-more time than the acceleration in parallelizing sample skipping, resulting in an increased time overall. FIXME
+Except for Global-lock, all other parallelization approaches performed better as the number of threads increased because there were more threads working 
+in parallel. However, for the Global-lock, although using 2 threads resulted in a better performance than 1 thread, increasing the threads furthermore to 
+4 would not improve the performance anymore, instead there came some extra overhead to make the elapsed time longer. The reason is that this approach used 
+a coarse-grained global lock, so the lock got contended every time when there were some threads trying to access the hash table at the same time. The elapsed 
+time when using 2 threads is less than when using 1 thread because the time spent by skipping samples got parallelized. However, when accessing the hash 
+table, there was actually only one thread that could access the hash table at a time and so the hash table modification would not be parallelized and accelerated 
+by the threads and became the bottleneck. Furthermore, when adding more threads, it brought in more overhead such as thread initialization, and the locking 
+overhead (e.g. blocking, wakeup, and the fact that coarse-grained locking may increase cache misses from cohenrence protocol, as discussed in lecture), which 
+cancelled out the acceleration in parallelizing sample skipping, resulted in an increased time overall.
 
 10. Repeat the data collection above with samples to skip set to 100 and give the table. How does this change impact the results compared with when set to 50? Why? 
 
-Measurement (in sec) with samples_to_skip set to 100
-Original Randtrack: 13.132
-Global-lock:
-    1 Thread:       13.226
-    2 Threads:      7.242
-    4 Threads:      4.754
-List-lock:
-    1 Thread:       13.454
-    2 Threads:      6.960
-    4 Threads:      3.600
-Element-lock:
-    1 Thread:       13.368
-    2 Threads:      6.918
-    4 Threads:      3.588
-Reduction Version:
-    1 Thread:       13.106
-    2 Threads:      6.620
-    4 Threads:      3.332
++------------------------------------------------------+
+| Measurement (in sec) with samples_to_skip set to 100 |
++----------------+-----------+------------+------------+
+| Version        |  1 Thread |  2 Threads |  4 Threads |
++----------------+-----------+------------+------------+
+| Original       |                13.132               |
++----------------+-----------+------------+------------+
+| Global-lock    |   13.208  |    7.268   |    4.710   |
++----------------+-----------+------------+------------+
+| List-lock      |   13.560  |    7.090   |    3.650   |
++----------------+-----------+------------+------------+
+| Element-lock   |   13.748  |    7.162   |    3.710   |
++----------------+-----------+------------+------------+
+| Reduction      |   13.106  |    6.620   |    3.332   |
++----------------+-----------+------------+------------+
 
-As the number of skipping samples increased from 50 to 100, the elapsed time in all cases except when using Global-lock with 4 threads, became longer than before as it takes 
-more time to skip the samples in all threads. For Global-lock with 4 threads, the elapsed time did not have significant improvement because the bottleneck, which is the hash table modification,
-staied the same as before. Although each thread spent more time in sample skipping, after this is done, the thread still need to wait for the lock becoming available. Therefore,
-the elapsed time in this case did not change much. However, when using Global-lock, the trend became different than when samples_to_skip=50, where the elapsed time became longer when number of threads 
-decreases. The reason is because, when the number of threads is 1 or 2, there are no/less threads trying to acquire the same lock, resulting in less contension, so the hash table
-modification is not the botteneck as opposite to 4-thread case, and the elapsed time was dominated by the increases samples_to_skip resulting in longer elapsed times.
+As the number of skipping samples increased from 50 to 100, the elapsed time in all cases except when using Global-lock with 4 threads, became much longer (~1.9x) than 
+before as it took more time to skip the samples in all threads. For Global-lock with 4 threads, the elapsed time did not have a significant difference because the bottleneck, 
+which is the hash table modification, stayed the same as before. Although each thread spent more time in sample skipping, this can be accelerated by parallelization, while 
+after this is done, the threads still needed to wait for the lock to become available. Also, the thread and locking overhead slowed down the performance as discussed in the 
+previous question. Therefore, the bottleneck stayed the same and the elapsed time, in this case, did not change much. However, when using Global-lock, the trend became different 
+than when samples_to_skip=50, where the elapsed time became longer when the number of threads decreases. The reason is that, when the number of threads is 1 or 2, each thread 
+spent a longer time in sample skipping, so the elapsed time was dominated by the increased samples_to_skip resulting in longer elapsed times.
 
 11. Which approach should OptsRus ship? Keep in mind that some customers might be using multicores with more than 4 cores, while others might have only one or two cores. 
 
-The OptsRus should ship the Reduction Version approach, as it has the smallest elapsed time when number of threads larger than one, which gives the best performance for users having more than
-one core and the performance will have significant improvement than the Original Randtrack. For users having only one core, the elapsed time for Reduction Version staies similar as the Original 
-Randtrack, because it does not use locking, resulting in less overhead. In comparison, the other locking approaches have more elapsed time than the original when thread=1, which will give the 1-core
-users worse experience, resulting in user loss. Therefore, for users who only have one core, the Reduction Version approach will not give them performance drop down, so they will have the same 
-experience than before.
+The OptsRus should ship the Reduction Version approach, as it has the smallest elapsed time when the number of threads is larger than one, which gives the best performance 
+for users having more than one core and the performance will have significant improvement than the Original Randtrack. For users having only one core, the elapsed time for 
+the Reduction Version stays similar to the Original Randtrack, because it does not use locking, resulting in less overhead. Therefore, for users who only have one core, 
+the Reduction Version approach will not give them a performance drop-down, so they will have the same experience as before. In comparison, the other locking approaches have 
+more elapsed time than the original when thread=1, which will give the 1-core users worse experiences, resulting in user loss. As a result, the company should choose the 
+Reduction Version.
