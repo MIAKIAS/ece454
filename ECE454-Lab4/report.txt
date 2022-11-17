@@ -62,15 +62,15 @@ Cons:
 +---------------+-----------+------------+------------+
 | Version       |  1 Thread |  2 Threads |  4 Threads |
 +---------------+-----------+------------+------------+
-| Original      |                6.712                |
+| Original      |                6.724                |
 +---------------+-----------+------------+------------+
-| Global-lock   |   6.788   |    4.174   |    4.670   |
+| Global-lock   |   6.788   |    4.174   |    4.470   |
 +---------------+-----------+------------+------------+
 | List-lock     |   7.106   |    3.782   |    2.004   |
 +---------------+-----------+------------+------------+
 | Element-lock  |   7.330   |    3.944   |    2.088   |
 +---------------+-----------+------------+------------+
-| Reduction     |   6.702   |    3.418   |    1.706   |
+| Reduction     |   6.732   |    3.418   |    1.706   |
 +---------------+-----------+------------+------------+
 
 8. For samples to skip set to 50, what is the overhead for each parallelization approach? Report this as the runtime of the parallel version with one 
@@ -79,13 +79,13 @@ Cons:
 +-------------------+---------------------+
 | Version           | Overhead            |
 +-------------------+---------------------+
-| Global-lock       | 6.788/6.712 = 1.011 |
+| Global-lock       | 6.788/6.724 = 1.009 |
 +-------------------+---------------------+
-| List-lock         | 7.106/6.712 = 1.059 |
+| List-lock         | 7.106/6.724 = 1.057 |
 +-------------------+---------------------+
-| Element-lock      | 7.330/6.712 = 1.092 |
+| Element-lock      | 7.330/6.724 = 1.090 |
 +-------------------+---------------------+
-| Reduction Version | 6.702/6.712 = 0.999 |
+| Reduction Version | 6.732/6.724 = 1.001 |
 +-------------------+---------------------+
 
 9. How does each approach perform as the number of threads increases? If performance gets worse for a certain case, explain why that may have happened. 
@@ -115,7 +115,7 @@ cancelled out the acceleration in parallelizing sample skipping, resulted in an 
 +----------------+-----------+------------+------------+
 | Element-lock   |   13.748  |    7.162   |    3.710   |
 +----------------+-----------+------------+------------+
-| Reduction      |   13.106  |    6.620   |    3.332   |
+| Reduction      |   13.148  |    6.628   |    3.332   |
 +----------------+-----------+------------+------------+
 
 As the number of skipping samples increased from 50 to 100, the elapsed time in all cases except when using Global-lock with 4 threads, became much longer (~1.9x) than 
