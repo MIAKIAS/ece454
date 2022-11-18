@@ -13,7 +13,7 @@ use the methods in the wrong version (or mistakenly run redundant code from two 
 We can implement this without modifying the hash class, but we have to know its internal implementation. We can create an 
 array of locks, where each lock is responsible for an element in the "entries" array, i.e. each lock corresponds to a list 
 (and the total number of lists has been given in the randtrack file). The lock can be added in the randtrack file, and be 
-applied when the hashtable accesses its lists or list elements. However, to do so, we need to know how the hash class is 
+applied when the threads accesse the lists or list elements. However, to do so, we need to know how the hash class is 
 implemented, especially how the hash index is computed (i.e. the implementation of HASH_INDEX macro), so that we know which 
 keys belong to the same list. (Assume this index computation counts as the "internal implementation").
 
@@ -83,7 +83,7 @@ Cons:
 +-------------------+---------------------+
 | List-lock         | 7.088/6.694 = 1.059 |
 +-------------------+---------------------+
-| Element-lock      | 7.482/6.694 = 1.117 |
+| Element-lock      | 7.482/6.694 = 1.118 |
 +-------------------+---------------------+
 | Reduction Version | 6.724/6.694 = 1.004 |
 +-------------------+---------------------+
@@ -109,13 +109,13 @@ cancelled out the acceleration in parallelizing sample skipping, resulted in an 
 +----------------+-----------+------------+------------+
 | Original       |                13.144               |
 +----------------+-----------+------------+------------+
-| Global-lock    |   13.170  |    7.286   |    4.750   |
+| Global-lock    |   13.240  |    7.286   |    4.750   |
 +----------------+-----------+------------+------------+
 | List-lock      |   13.510  |    6.994   |    3.610   |
 +----------------+-----------+------------+------------+
 | Element-lock   |   13.882  |    7.192   |    3.738   |
 +----------------+-----------+------------+------------+
-| Reduction      |   13.240  |    6.624   |    3.316   |
+| Reduction      |   13.196  |    6.624   |    3.316   |
 +----------------+-----------+------------+------------+
 
 As the number of skipping samples increased from 50 to 100, the elapsed time in all cases except when using Global-lock with 4 threads, became much longer (~1.9x) than 
@@ -133,4 +133,4 @@ for users having more than one core and the performance will have significant im
 the Reduction Version stays similar to the Original Randtrack, because it does not use locking, resulting in less overhead. Therefore, for users who only have one core, 
 the Reduction Version approach will not give them an obvious performance drop-down, so they will have the same experience as before. In comparison, the other locking approaches have 
 more elapsed time than the original when thread=1, which will give the 1-core users worse experiences, resulting in user loss. As a result, the company should choose the 
-Reduction Version.
+Reduction Version. (Here we assume that the elapsed time is more important than memory usage).

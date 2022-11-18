@@ -170,13 +170,12 @@ main (int argc, char* argv[]){
     thread_hashes[0].merge(&thread_hashes[i]);
   }
 
-  delete []params;
-  // for (int i = 0; i < num_threads; ++i) {
-  //   thread_hashes[i].cleanup();
-  // }
-  // delete []thread_hashes;
-  delete []thread;
-
   // print a list of the frequency of all samples
   thread_hashes[0].print();
+
+  delete []params;
+  for (int i = 0; i < num_threads; ++i) {
+    thread_hashes[i].cleanup();
+  }
+  delete []thread;
 }
