@@ -42,10 +42,8 @@ class sample {
 // it is a C++ template, which means we define the types for
 // the element and key value here: element is "class sample" and
 // key value is "unsigned".  
-hash<sample,unsigned> h;
-
 // Per thread hash table
-hash<sample,unsigned>* thread_hashes;
+hash<sample,unsigned> thread_hashes[4];
 
 /* Thread routine parameter */
 typedef struct thread_params {
@@ -112,10 +110,6 @@ main (int argc, char* argv[]){
   sscanf(argv[2], " %d", &samples_to_skip);
 
   // initialize a 16K-entry (2**14) hash of empty lists
-  h.setup(14);
-  
-  // Initialize the per thread hash
-  thread_hashes = new hash<sample,unsigned>[num_threads];
   for (int i = 0; i < num_threads; ++i) {
     thread_hashes[i].setup(14);
   }
@@ -172,17 +166,17 @@ main (int argc, char* argv[]){
   }
 
   // Merge the thread hash tables
-  for (int i = 0; i < num_threads; ++i) {
-    h.merge(&thread_hashes[i]);
+  for (int i = 1; i < num_threads; ++i) {
+    thread_hashes[0].merge(&thread_hashes[i]);
   }
 
   delete []params;
-  for (int i = 0; i < num_threads; ++i) {
-    thread_hashes[i].cleanup();
-  }
-  delete []thread_hashes;
+  // for (int i = 0; i < num_threads; ++i) {
+  //   thread_hashes[i].cleanup();
+  // }
+  // delete []thread_hashes;
   delete []thread;
 
   // print a list of the frequency of all samples
-  h.print();
+  thread_hashes[0].print();
 }

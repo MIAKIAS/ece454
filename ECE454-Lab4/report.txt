@@ -62,15 +62,15 @@ Cons:
 +---------------+-----------+------------+------------+
 | Version       |  1 Thread |  2 Threads |  4 Threads |
 +---------------+-----------+------------+------------+
-| Original      |                6.724                |
+| Original      |                6.694                |
 +---------------+-----------+------------+------------+
-| Global-lock   |   6.788   |    4.174   |    4.470   |
+| Global-lock   |   6.766   |    4.286   |    4.706   |
 +---------------+-----------+------------+------------+
-| List-lock     |   7.106   |    3.782   |    2.004   |
+| List-lock     |   7.088   |    3.762   |    1.986   |
 +---------------+-----------+------------+------------+
-| Element-lock  |   7.330   |    3.944   |    2.088   |
+| Element-lock  |   7.482   |    4.008   |    2.104   |
 +---------------+-----------+------------+------------+
-| Reduction     |   6.732   |    3.418   |    1.706   |
+| Reduction     |   6.724   |    3.390   |    1.702   |
 +---------------+-----------+------------+------------+
 
 8. For samples to skip set to 50, what is the overhead for each parallelization approach? Report this as the runtime of the parallel version with one 
@@ -79,13 +79,13 @@ Cons:
 +-------------------+---------------------+
 | Version           | Overhead            |
 +-------------------+---------------------+
-| Global-lock       | 6.788/6.724 = 1.009 |
+| Global-lock       | 6.766/6.694 = 1.011 |
 +-------------------+---------------------+
-| List-lock         | 7.106/6.724 = 1.057 |
+| List-lock         | 7.088/6.694 = 1.059 |
 +-------------------+---------------------+
-| Element-lock      | 7.330/6.724 = 1.090 |
+| Element-lock      | 7.482/6.694 = 1.117 |
 +-------------------+---------------------+
-| Reduction Version | 6.732/6.724 = 1.001 |
+| Reduction Version | 6.724/6.694 = 1.004 |
 +-------------------+---------------------+
 
 9. How does each approach perform as the number of threads increases? If performance gets worse for a certain case, explain why that may have happened. 
@@ -107,15 +107,15 @@ cancelled out the acceleration in parallelizing sample skipping, resulted in an 
 +----------------+-----------+------------+------------+
 | Version        |  1 Thread |  2 Threads |  4 Threads |
 +----------------+-----------+------------+------------+
-| Original       |                13.132               |
+| Original       |                13.144               |
 +----------------+-----------+------------+------------+
-| Global-lock    |   13.208  |    7.268   |    4.710   |
+| Global-lock    |   13.170  |    7.286   |    4.750   |
 +----------------+-----------+------------+------------+
-| List-lock      |   13.560  |    7.090   |    3.650   |
+| List-lock      |   13.510  |    6.994   |    3.610   |
 +----------------+-----------+------------+------------+
-| Element-lock   |   13.748  |    7.162   |    3.710   |
+| Element-lock   |   13.882  |    7.192   |    3.738   |
 +----------------+-----------+------------+------------+
-| Reduction      |   13.148  |    6.628   |    3.332   |
+| Reduction      |   13.240  |    6.624   |    3.316   |
 +----------------+-----------+------------+------------+
 
 As the number of skipping samples increased from 50 to 100, the elapsed time in all cases except when using Global-lock with 4 threads, became much longer (~1.9x) than 
@@ -131,6 +131,6 @@ spent a longer time in sample skipping, so the elapsed time was dominated by the
 The OptsRus should ship the Reduction Version approach, as it has the smallest elapsed time when the number of threads is larger than one, which gives the best performance 
 for users having more than one core and the performance will have significant improvement than the Original Randtrack. For users having only one core, the elapsed time for 
 the Reduction Version stays similar to the Original Randtrack, because it does not use locking, resulting in less overhead. Therefore, for users who only have one core, 
-the Reduction Version approach will not give them a performance drop-down, so they will have the same experience as before. In comparison, the other locking approaches have 
+the Reduction Version approach will not give them an obvious performance drop-down, so they will have the same experience as before. In comparison, the other locking approaches have 
 more elapsed time than the original when thread=1, which will give the 1-core users worse experiences, resulting in user loss. As a result, the company should choose the 
 Reduction Version.
