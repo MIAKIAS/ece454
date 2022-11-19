@@ -1,3 +1,8 @@
+#############################################################################################
+utorid: wangw222
+name: WEIZHOU WANG
+email: weizhou.wang@mail.utoronto.ca
+#############################################################################################
 1. Why is it important to #ifdef out methods and datastructures that aren’t used for different versions of randtrack? 
 
 With #ifdef, the code that does not belong to the current version will be ignored and not be compiled. If we do not use 
