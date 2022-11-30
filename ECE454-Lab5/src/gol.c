@@ -127,8 +127,8 @@ main (int argc, char* argv[])
   inboard = load_board (input, &nrows, &ncols);
   fclose (input);
 
-  /* Create a second board for ping-ponging */
-  outboard = make_board (nrows, ncols);
+  outboard = malloc (2 * nrows * ncols); //FIXME 2
+  assert (outboard != NULL);
 
   /* If we want to verify the result, then make a third board and copy
      the initial state into it */

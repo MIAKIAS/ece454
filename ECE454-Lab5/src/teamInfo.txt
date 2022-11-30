@@ -1,4 +1,4 @@
-teamName: xxx
-student1_fullName: xxx
-student1_studentNumber: 123456789
-student1_email: xxx@mail.utoronto.ca
+teamName: 学不下去了
+student1_fullName: Weizhou Wang
+student1_studentNumber: 1004421262
+student1_email: weizhou.wang@mail.utoronto.ca
