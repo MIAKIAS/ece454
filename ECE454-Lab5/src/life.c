@@ -51,9 +51,9 @@ game_of_life (char* outboard,
 					continue;
 				}
 				// Calculate the surrounding counts
-				neighbor_count = (*(inboard + index)) >> 1;
+				neighbor_count = (*(inboard + index)) & 0xf;
 				// If alive, but dying
-				if (*(inboard + index) & 0x01) {
+				if (*(inboard + index) & 0x10) {
 					if ((neighbor_count != 2) && (neighbor_count != 3)) {
 						unset_cell(outboard, i, j, nrows, ncols);
 					}
@@ -75,7 +75,7 @@ game_of_life (char* outboard,
 		if (*(inboard+i) == 0) {
 			continue;
 		}
-		*(inboard+i) &= 0x01;
+		*(inboard+i) >>= 4;
 	}
 	return inboard;
 }

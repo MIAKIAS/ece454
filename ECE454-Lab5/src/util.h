@@ -56,15 +56,15 @@ static inline void set_cell(char* board, const int row, const int col, const int
 	}
 
 	
-	*cell_ptr |= 0x01;
-	*(cell_ptr + jwest) += 2;
-	*(cell_ptr + jeast) += 2;
-	*(cell_ptr + inorth + jwest) += 2;
-	*(cell_ptr + inorth) += 2;
-	*(cell_ptr + inorth + jeast) += 2;
-	*(cell_ptr + isouth + jwest) += 2;
-	*(cell_ptr + isouth) += 2;
-	*(cell_ptr + isouth + jeast) += 2;
+	*cell_ptr |= 0x10;
+	*(cell_ptr + jwest) += 1;
+	*(cell_ptr + jeast) += 1;
+	*(cell_ptr + inorth + jwest) += 1;
+	*(cell_ptr + inorth) += 1;
+	*(cell_ptr + inorth + jeast) += 1;
+	*(cell_ptr + isouth + jwest) += 1;
+	*(cell_ptr + isouth) += 1;
+	*(cell_ptr + isouth + jeast) += 1;
 }
 
 static inline void unset_cell(char* board, const int row, const int col, const int nrows, const int ncols) {
@@ -95,15 +95,15 @@ static inline void unset_cell(char* board, const int row, const int col, const i
 	}
 
 	
-	*cell_ptr &= ~0x01;
-	*(cell_ptr + jwest) -= 2;
-	*(cell_ptr + jeast) -= 2;
-	*(cell_ptr + inorth + jwest) -= 2;
-	*(cell_ptr + inorth) -= 2;
-	*(cell_ptr + inorth + jeast) -= 2;
-	*(cell_ptr + isouth + jwest) -= 2;
-	*(cell_ptr + isouth) -= 2;
-	*(cell_ptr + isouth + jeast) -= 2;
+	*cell_ptr &= ~0x10;
+	*(cell_ptr + jwest) -= 1;
+	*(cell_ptr + jeast) -= 1;
+	*(cell_ptr + inorth + jwest) -= 1;
+	*(cell_ptr + inorth) -= 1;
+	*(cell_ptr + inorth + jeast) -= 1;
+	*(cell_ptr + isouth + jwest) -= 1;
+	*(cell_ptr + isouth) -= 1;
+	*(cell_ptr + isouth + jeast) -= 1;
 }
 
 #endif /* _util_h */
