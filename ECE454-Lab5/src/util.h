@@ -27,29 +27,32 @@ alivep (char count, char state)
     (state && (count >= 2) && (count <= 3));
 }
 
-
-static inline void set_cell(char* board, const int row, const int col, const int nrows, const int ncols) {
-	const int LDA = nrows;
+static inline void init_cell(char* board, const int i, const int nrows, const int ncols) {
+	// const int LDA = nrows;
 
 	// Hard-wiring
-	char* cell_ptr = &BOARD(board, row, col);
+	char* cell_ptr = board + i;
 	int inorth, isouth, jwest, jeast;
-	if (row == 0) {
+	// Within first row
+	if (i < ncols) {
 		inorth = nrows * ncols - nrows;
 	} else {
 		inorth = -1 * nrows;
 	}
-	if (row == nrows - 1) {
+	// Within last row
+	if (i >= nrows * ncols - ncols) {
 		isouth = -1 * (nrows * ncols - nrows);
 	} else {
 		isouth = nrows;
 	}
-	if (col == 0) {
+	// Within first column
+	if (i % ncols == 0) {
 		jwest = ncols - 1;
 	} else {
 		jwest = -1;
 	}
-	if (col == ncols - 1) {
+	// Within last column
+	if (i % ncols == ncols - 1) {
 		jeast = -1 * (ncols - 1);
 	} else {
 		jeast = 1;
@@ -67,33 +70,95 @@ static inline void set_cell(char* board, const int row, const int col, const int
 	*(cell_ptr + isouth + jeast) += 1;
 }
 
-static inline void unset_cell(char* board, const int row, const int col, const int nrows, const int ncols) {
-	const int LDA = nrows;
-
+static inline void set_cell(char* board, const int i, const int nrows, const int ncols, int* changes, unsigned int* index) {
+	// const int LDA = nrows;
 	// Hard-wiring
-	char* cell_ptr = &BOARD(board, row, col);
+	char* cell_ptr = board + i;
+	if (*cell_ptr & 0x10) {
+		return;
+	}
 	int inorth, isouth, jwest, jeast;
-	if (row == 0) {
+	// Within first row
+	if (i < ncols) {
 		inorth = nrows * ncols - nrows;
 	} else {
 		inorth = -1 * nrows;
 	}
-	if (row == nrows - 1) {
+	// Within last row
+	if (i >= nrows * ncols - ncols) {
 		isouth = -1 * (nrows * ncols - nrows);
 	} else {
 		isouth = nrows;
 	}
-	if (col == 0) {
+	// Within first column
+	if (i % ncols == 0) {
 		jwest = ncols - 1;
 	} else {
 		jwest = -1;
 	}
-	if (col == ncols - 1) {
+	// Within last column
+	if (i % ncols == ncols - 1) {
 		jeast = -1 * (ncols - 1);
 	} else {
 		jeast = 1;
 	}
 
+	
+	*cell_ptr |= 0x10;
+	*(cell_ptr + jwest) += 1;
+	*(cell_ptr + jeast) += 1;
+	*(cell_ptr + inorth + jwest) += 1;
+	*(cell_ptr + inorth) += 1;
+	*(cell_ptr + inorth + jeast) += 1;
+	*(cell_ptr + isouth + jwest) += 1;
+	*(cell_ptr + isouth) += 1;
+	*(cell_ptr + isouth + jeast) += 1;
+
+	changes[(*index)++] = i;
+	changes[(*index)++] = i + jwest;
+	changes[(*index)++] = i + jeast;
+	changes[(*index)++] = i + inorth + jwest;
+	changes[(*index)++] = i + inorth;
+	changes[(*index)++] = i + inorth + jeast;
+	changes[(*index)++] = i + isouth + jwest;
+	changes[(*index)++] = i + isouth;
+	changes[(*index)++] = i + isouth + jeast;
+
+}
+
+static inline void unset_cell(char* board, const int i, const int nrows, const int ncols, int* changes, unsigned int* index) {
+	// const int LDA = nrows;
+
+	// Hard-wiring
+	char* cell_ptr = board + i;
+	if (!(*cell_ptr & 0x10)) {
+		return;
+	}
+	int inorth, isouth, jwest, jeast;
+	// Within first row
+	if (i < ncols) {
+		inorth = nrows * ncols - nrows;
+	} else {
+		inorth = -1 * nrows;
+	}
+	// Within last row
+	if (i >= nrows * ncols - ncols) {
+		isouth = -1 * (nrows * ncols - nrows);
+	} else {
+		isouth = nrows;
+	}
+	// Within first column
+	if (i % ncols == 0) {
+		jwest = ncols - 1;
+	} else {
+		jwest = -1;
+	}
+	// Within last column
+	if (i % ncols == ncols - 1) {
+		jeast = -1 * (ncols - 1);
+	} else {
+		jeast = 1;
+	}
 	
 	*cell_ptr &= ~0x10;
 	*(cell_ptr + jwest) -= 1;
@@ -104,6 +169,16 @@ static inline void unset_cell(char* board, const int row, const int col, const i
 	*(cell_ptr + isouth + jwest) -= 1;
 	*(cell_ptr + isouth) -= 1;
 	*(cell_ptr + isouth + jeast) -= 1;
+
+	changes[(*index)++] = i;
+	changes[(*index)++] = i + jwest;
+	changes[(*index)++] = i + jeast;
+	changes[(*index)++] = i + inorth + jwest;
+	changes[(*index)++] = i + inorth;
+	changes[(*index)++] = i + inorth + jeast;
+	changes[(*index)++] = i + isouth + jwest;
+	changes[(*index)++] = i + isouth;
+	changes[(*index)++] = i + isouth + jeast;
 }
 
 #endif /* _util_h */
