@@ -72,10 +72,6 @@ game_of_life (char* outboard,
 		memcpy(outboard, inboard, nrows*ncols);
 		new_index = 0;
 		for (index = 0; (i = changes[index]) != -1 ; ++index) {
-			// We do not bother totally dead cells
-			if (*(inboard + i) == 0) {
-				continue;
-			}
 			// Calculate the surrounding counts
 			neighbor_count = (*(inboard + i)) & 0xf;
 			// If alive, but dying
