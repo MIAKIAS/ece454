@@ -122,9 +122,9 @@ main (int argc, char* argv[])
 	  exit (EXIT_FAILURE);
 	}
     }
-
+  int* changes;
   /* Load the initial board state from the input file */
-  inboard = load_board (input, &nrows, &ncols);
+  inboard = load_board (input, &nrows, &ncols, &changes);
   fclose (input);
 
   outboard = malloc (2 * nrows * ncols); //FIXME 2
@@ -142,7 +142,7 @@ main (int argc, char* argv[])
    * Evolve board gens_max ticks, and time the evolution.  You will
    * parallelize the game_of_life() function for this assignment.
    */
-  final_board = game_of_life (outboard, inboard, nrows, ncols, gens_max);
+  final_board = game_of_life (outboard, inboard, nrows, ncols, gens_max, changes);
 
   /* Print (or save, depending on command-line argument <outfilename>)
      the final board */

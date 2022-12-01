@@ -13,7 +13,8 @@ game_of_life (char* outboard,
 	      char* inboard,
 	      const int nrows,
 	      const int ncols,
-	      const int gens_max);
+	      const int gens_max,
+		  int* changes);
 
 /**
  * Same output as game_of_life() above, except this is not

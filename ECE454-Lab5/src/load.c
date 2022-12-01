@@ -46,11 +46,12 @@ load_dimensions (FILE* input, int* nrows, int* ncols)
 }
 
 static char*
-load_board_values (FILE* input, const int nrows, const int ncols)
+load_board_values (FILE* input, const int nrows, const int ncols, int* changes)
 {
   char* board = NULL;
   int ngotten = 0;
   int i = 0;
+  unsigned int index = 0;
 
   /* Make a new board */
   board = make_board (nrows, ncols);
@@ -70,18 +71,20 @@ load_board_values (FILE* input, const int nrows, const int ncols)
     {
       // If the cell is alive, then set the cell and surrounding counts
       if (alive == '1') {
-        init_cell(board, i, nrows, ncols);
+        set_cell(board, i, nrows, ncols, changes, &index);
       }
     }
   }
+  changes[index] = -1;
 
   return board;
 }
 
 char*
-load_board (FILE* input, int* nrows, int* ncols)
+load_board (FILE* input, int* nrows, int* ncols, int** changes)
 {
   load_dimensions (input, nrows, ncols);
-  return load_board_values (input, *nrows, *ncols);
+  *changes = malloc(9*(*nrows)*(*ncols)*sizeof(int));
+  return load_board_values (input, *nrows, *ncols, *changes);
 }
 

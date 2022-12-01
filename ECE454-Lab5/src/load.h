@@ -10,7 +10,7 @@
  * column-oriented array).
  */
 char*
-load_board (FILE* input, int* nrows, int* ncols);
+load_board (FILE* input, int* nrows, int* ncols, int** changes);
 
 /**
  * Return a malloc'd pointer to a blank board of dimension nrows by
