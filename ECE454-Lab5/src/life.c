@@ -58,10 +58,8 @@ game_of_life (char* outboard,
 						unset_cell(outboard, i, j, nrows, ncols);
 					}
 				// If dead, but reborning
-				} else {
-					if (neighbor_count == (char)3) {
-						set_cell(outboard, i, j, nrows, ncols);
-					}
+				} else if (neighbor_count == (char)3){
+					set_cell(outboard, i, j, nrows, ncols);
 				}
 				++index;
 			}
