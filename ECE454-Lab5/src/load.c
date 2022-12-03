@@ -71,7 +71,7 @@ load_board_values (FILE* input, const int nrows, const int ncols, int* changes)
     {
       // If the cell is alive, then set the cell and surrounding counts
       if (alive == '1') {
-        set_cell(board, i, nrows, ncols, changes, &index);
+        init_cell(board, i, nrows, ncols, changes, &index);
       }
     }
   }

@@ -1,6 +1,7 @@
 #ifndef _util_h
 #define _util_h
-
+#include <omp.h>
+#include <stdatomic.h>
 #define BOARD( __board, __i, __j )  (__board[LDA*(__i) + (__j)])
 
 /**
@@ -27,11 +28,10 @@ alivep (char count, char state)
     (state && (count >= 2) && (count <= 3));
 }
 
-static inline void init_cell(char* board, const int i, const int nrows, const int ncols) {
-	// const int LDA = nrows;
-
+static inline void init_cell(char* board, const int i, const int nrows, const int ncols, int* changes, unsigned int* index) {
 	// Hard-wiring
 	char* cell_ptr = board + i;
+
 	int inorth, isouth, jwest, jeast;
 	// Within first row
 	if (i < ncols) {
@@ -58,25 +58,30 @@ static inline void init_cell(char* board, const int i, const int nrows, const in
 		jeast = 1;
 	}
 
-	
 	*cell_ptr |= 0x10;
-	*(cell_ptr + jwest) += 1;
-	*(cell_ptr + jeast) += 1;
-	*(cell_ptr + inorth + jwest) += 1;
-	*(cell_ptr + inorth) += 1;
-	*(cell_ptr + inorth + jeast) += 1;
-	*(cell_ptr + isouth + jwest) += 1;
-	*(cell_ptr + isouth) += 1;
-	*(cell_ptr + isouth + jeast) += 1;
+	cell_ptr[jwest]++;
+	cell_ptr[jeast]++;
+	cell_ptr[inorth+jwest]++;
+	cell_ptr[inorth]++;
+	cell_ptr[inorth+jeast]++;
+	cell_ptr[isouth+jwest]++;
+	cell_ptr[isouth]++;
+	cell_ptr[isouth+jeast]++;
+
+	changes[(*index)++] = i;
 }
 
 static inline void set_cell(char* board, const int i, const int nrows, const int ncols, int* changes, unsigned int* index) {
 	// const int LDA = nrows;
 	// Hard-wiring
-	char* cell_ptr = board + i;
-	if (*cell_ptr & 0x10) {
+	atomic_char* cell_ptr = (atomic_char*)board + i;
+	char state = atomic_fetch_or(board + i, (char)0x10);
+	state &= 0x10;
+	if (state) {
 		return;
 	}
+
+	atomic_uint* atomic_index = (atomic_uint*)index;
 	int inorth, isouth, jwest, jeast;
 	// Within first row
 	if (i < ncols) {
@@ -103,37 +108,30 @@ static inline void set_cell(char* board, const int i, const int nrows, const int
 		jeast = 1;
 	}
 
-	
-	*cell_ptr |= 0x10;
-	*(cell_ptr + jwest) += 1;
-	*(cell_ptr + jeast) += 1;
-	*(cell_ptr + inorth + jwest) += 1;
-	*(cell_ptr + inorth) += 1;
-	*(cell_ptr + inorth + jeast) += 1;
-	*(cell_ptr + isouth + jwest) += 1;
-	*(cell_ptr + isouth) += 1;
-	*(cell_ptr + isouth + jeast) += 1;
+	cell_ptr[jwest]++;
+	cell_ptr[jeast]++;
+	cell_ptr[inorth+jwest]++;
+	cell_ptr[inorth]++;
+	cell_ptr[inorth+jeast]++;
+	cell_ptr[isouth+jwest]++;
+	cell_ptr[isouth]++;
+	cell_ptr[isouth+jeast]++;
 
-	changes[(*index)++] = i;
-	changes[(*index)++] = i + jwest;
-	changes[(*index)++] = i + jeast;
-	changes[(*index)++] = i + inorth + jwest;
-	changes[(*index)++] = i + inorth;
-	changes[(*index)++] = i + inorth + jeast;
-	changes[(*index)++] = i + isouth + jwest;
-	changes[(*index)++] = i + isouth;
-	changes[(*index)++] = i + isouth + jeast;
-
+	changes[(*atomic_index)++] = i;
 }
 
 static inline void unset_cell(char* board, const int i, const int nrows, const int ncols, int* changes, unsigned int* index) {
 	// const int LDA = nrows;
 
 	// Hard-wiring
-	char* cell_ptr = board + i;
-	if (!(*cell_ptr & 0x10)) {
+	atomic_char* cell_ptr = (atomic_char*)board + i;
+	char state = atomic_fetch_and(board + i, (char)~0x10);
+	state &= 0x10;
+	if (!state) {
 		return;
 	}
+
+	atomic_uint* atomic_index = (atomic_uint*)index;
 	int inorth, isouth, jwest, jeast;
 	// Within first row
 	if (i < ncols) {
@@ -159,26 +157,18 @@ static inline void unset_cell(char* board, const int i, const int nrows, const i
 	} else {
 		jeast = 1;
 	}
-	
-	*cell_ptr &= ~0x10;
-	*(cell_ptr + jwest) -= 1;
-	*(cell_ptr + jeast) -= 1;
-	*(cell_ptr + inorth + jwest) -= 1;
-	*(cell_ptr + inorth) -= 1;
-	*(cell_ptr + inorth + jeast) -= 1;
-	*(cell_ptr + isouth + jwest) -= 1;
-	*(cell_ptr + isouth) -= 1;
-	*(cell_ptr + isouth + jeast) -= 1;
 
-	changes[(*index)++] = i;
-	changes[(*index)++] = i + jwest;
-	changes[(*index)++] = i + jeast;
-	changes[(*index)++] = i + inorth + jwest;
-	changes[(*index)++] = i + inorth;
-	changes[(*index)++] = i + inorth + jeast;
-	changes[(*index)++] = i + isouth + jwest;
-	changes[(*index)++] = i + isouth;
-	changes[(*index)++] = i + isouth + jeast;
+	cell_ptr[jwest]--;
+	cell_ptr[jeast]--;
+	cell_ptr[inorth+jwest]--;
+	cell_ptr[inorth]--;
+	cell_ptr[inorth+jeast]--;
+	cell_ptr[isouth+jwest]--;
+	cell_ptr[isouth]--;
+	cell_ptr[isouth+jeast]--;
+
+	changes[(*atomic_index)++] = i;
+
 }
 
 #endif /* _util_h */

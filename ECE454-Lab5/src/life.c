@@ -25,6 +25,19 @@ void print_grid(char* board, const int nrows, const int ncols) {
 		}
 	}
 }
+void update_cell(char* inboard, char* outboard, int* changes, int* next_changes, const int nrows, const int ncols, unsigned int* new_index, int i) {
+	// Calculate the surrounding counts
+	char neighbor_count = (*(inboard + i)) & 0xf;
+	// If alive, but dying
+	if (*(inboard + i) & 0x10) {
+		if ((neighbor_count != 2) && (neighbor_count != 3)) {
+			unset_cell(outboard, i, nrows, ncols, next_changes, new_index);
+		}
+	// If dead, but reborning
+	} else if (neighbor_count == 3){
+		set_cell(outboard, i, nrows, ncols, next_changes, new_index);
+	}
+}
 /*****************************************************************************
  * Game of life implementation
  ****************************************************************************/
@@ -38,28 +51,65 @@ game_of_life (char* outboard,
 
 	/* HINT: in the parallel decomposition, LDA may not be equal to
 	nrows! */
-    // const int LDA = nrows;
-	unsigned int curgen, i, new_index, index = 0;
-	char neighbor_count;
+	unsigned int new_index;
+	unsigned int curgen;
 	void* temp;
 	int* next_changes = malloc(9*nrows*ncols*sizeof(int));
+	int list_size = 0;
+
+	for (int k = 0; changes[k] != -1; ++k) {
+		++list_size;
+	}
  
 	for (curgen = 0; curgen < gens_max; curgen++) {
 		memcpy(outboard, inboard, nrows*ncols);
-		new_index = 0;
-		for (index = 0; (i = changes[index]) != -1 ; ++index) {
-			// Calculate the surrounding counts
-			neighbor_count = (*(inboard + i)) & 0xf;
-			// If alive, but dying
-			if (*(inboard + i) & 0x10) {
-				if ((neighbor_count != 2) && (neighbor_count != 3)) {
-					unset_cell(outboard, i, nrows, ncols, next_changes, &new_index);
-				}
-			// If dead, but reborning
-			} else if (neighbor_count == 3){
-				set_cell(outboard, i, nrows, ncols, next_changes, &new_index);
+#pragma omp parallel
+{
+		const int items = list_size / omp_get_num_threads();
+		const int begin = items * omp_get_thread_num();
+		const int end = (omp_get_thread_num() == omp_get_num_threads() - 1) ? list_size : begin+items;
+		int inorth, isouth, jwest, jeast;
+		unsigned int i;
+		//fprintf(stderr, "end_list: %d, list_size: %d, thread: %d, items: %d; begin: %d; end: %d\n", changes[list_size], list_size, omp_get_thread_num(), items, begin, end);
+		for (unsigned int index = begin; index < end ; ++index) {
+			i = changes[index];
+
+			// Within first row
+			if (i < ncols) {
+				inorth = nrows * ncols - nrows;
+			} else {
+				inorth = -1 * nrows;
 			}
+			// Within last row
+			if (i >= nrows * ncols - ncols) {
+				isouth = -1 * (nrows * ncols - nrows);
+			} else {
+				isouth = nrows;
+			}
+			// Within first column
+			if (i % ncols == 0) {
+				jwest = ncols - 1;
+			} else {
+				jwest = -1;
+			}
+			// Within last column
+			if (i % ncols == ncols - 1) {
+				jeast = -1 * (ncols - 1);
+			} else {
+				jeast = 1;
+			}
+			update_cell(inboard, outboard, changes, next_changes, nrows, ncols, &new_index, i);
+			update_cell(inboard, outboard, changes, next_changes, nrows, ncols, &new_index, i+jwest);
+			update_cell(inboard, outboard, changes, next_changes, nrows, ncols, &new_index, i+jeast);
+			update_cell(inboard, outboard, changes, next_changes, nrows, ncols, &new_index, i+inorth+jwest);
+			update_cell(inboard, outboard, changes, next_changes, nrows, ncols, &new_index, i+inorth);
+			update_cell(inboard, outboard, changes, next_changes, nrows, ncols, &new_index, i+inorth+jeast);
+			update_cell(inboard, outboard, changes, next_changes, nrows, ncols, &new_index, i+isouth+jwest);
+			update_cell(inboard, outboard, changes, next_changes, nrows, ncols, &new_index, i+isouth);
+			update_cell(inboard, outboard, changes, next_changes, nrows, ncols, &new_index, i+isouth+jeast);
 		}
+}
+		//fprintf(stderr, "finish\n");
 		next_changes[new_index] = -1;
 		// Swap the boards
 		temp = outboard;
@@ -69,10 +119,14 @@ game_of_life (char* outboard,
 		temp = next_changes;
 		next_changes = changes;
 		changes = temp;
+		// Update the size of the list
+		list_size = new_index;
+		new_index = 0;
 	}
 	
+	
 	// Convert back to original format
-	for (i = 0; i < nrows * ncols; ++i) {
+	for (int i = 0; i < nrows * ncols; ++i) {
 		if (*(inboard+i) == 0) {
 			continue;
 		}
